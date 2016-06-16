@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2015 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,24 @@
 
 #include <nfc_api.h>
 #include <rw_api.h>
+#include <signal.h>
 #include <phNfcCompId.h>
 #include <phNxpLog.h>
 #include <phNxpExtns_MifareStd.h>
+#include <phFriNfc_MifareStdTimer.h>
 
 phNxpExtns_Context_t       gphNxpExtns_Context;
 phNciNfc_TransceiveInfo_t  tNciTranscvInfo;
 phFriNfc_sNdefSmtCrdFmt_t  *NdefSmtCrdFmt = NULL;
 phFriNfc_NdefMap_t         *NdefMap = NULL;
 phLibNfc_NdefInfo_t        NdefInfo;
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
 pthread_mutex_t SharedDataMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 UINT8 current_key[6]={0};
 phNci_mfc_auth_cmd_t       gAuthCmdBuf;
+phFriNfc_MifareStdTimer_t  mTimerInfo;
+
 STATIC NFCSTATUS phNciNfc_SendMfReq(phNciNfc_TransceiveInfo_t tTranscvInfo,
                                     uint8_t *buff, uint16_t *buffSz);
 STATIC NFCSTATUS phLibNfc_SendRawCmd(phNfc_sTransceiveInfo_t*    pTransceiveInfo,
@@ -69,6 +73,7 @@ STATIC void Mfc_FormatNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status);
 STATIC void Mfc_WriteNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status);
 STATIC void Mfc_ReadNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status);
 STATIC void Mfc_CheckNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status);
+STATIC void Mfc_CheckNdef_timeoutcb_Routine(union sigval);
 
 /*******************************************************************************
 **
@@ -140,7 +145,7 @@ NFCSTATUS phNxpExtns_MfcModuleDeInit(void)
         free(NdefSmtCrdFmt);
         NdefSmtCrdFmt = NULL;
     }
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_lock(&SharedDataMutex);
 #endif
     if ( NULL != NdefInfo.psUpperNdefMsg )
@@ -153,7 +158,7 @@ NFCSTATUS phNxpExtns_MfcModuleDeInit(void)
         free(NdefInfo.psUpperNdefMsg);
         NdefInfo.psUpperNdefMsg = NULL;
     }
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_unlock(&SharedDataMutex);
 #endif
     if (NULL != gAuthCmdBuf.pauth_cmd)
@@ -266,7 +271,7 @@ NFCSTATUS phNxpExtns_MfcModuleInit(void)
         goto clean_and_return;
     }
     memset( NdefSmtCrdFmt , 0, sizeof(phFriNfc_sNdefSmtCrdFmt_t) );
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_lock(&SharedDataMutex);
 #endif
     NdefInfo.psUpperNdefMsg = malloc(sizeof(phNfc_sData_t));
@@ -289,7 +294,7 @@ NFCSTATUS phNxpExtns_MfcModuleInit(void)
     status = NFCSTATUS_SUCCESS;
 
 clean_and_return:
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_unlock(&SharedDataMutex);
 #endif
     if(status != NFCSTATUS_SUCCESS)
@@ -330,6 +335,14 @@ NFCSTATUS Mfc_CheckNdef(void)
             status = NFCSTATUS_SUCCESS;
         }
     }
+    /*Start a timer for MIFARE Check Ndef response callback handler*/
+    if(NFCSTATUS_SUCCESS == status)
+    {
+        memset(&mTimerInfo,0,sizeof(mTimerInfo));
+        mTimerInfo.mCb = Mfc_CheckNdef_timeoutcb_Routine;
+        mTimerInfo.mtimeout = (uint32_t)PH_FRINFC_CHECK_NDEF_TIMEOUT;
+        status = phFriNfc_MifareStd_StartTimer(&mTimerInfo );
+    }
     if( status != NFCSTATUS_SUCCESS )
     {
         status = NFCSTATUS_FAILED;
@@ -356,8 +369,15 @@ STATIC void Mfc_CheckNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status)
 {
     (void)NdefCtxt;
     tNFA_CONN_EVT_DATA conn_evt_data;
-
+    NFCSTATUS timer_status = NFCSTATUS_FAILED;
     conn_evt_data.ndef_detect.status = status;
+    //stopping checkndef timer if running
+    timer_status = phFriNfc_MifareStd_StopTimer(&mTimerInfo);
+    if(timer_status != NFCSTATUS_SUCCESS)
+    {
+        NXPLOG_EXTNS_E("Failed to stop timer");
+    }
+
     if(NFCSTATUS_SUCCESS == status)
     {
         /* NDef Tag Detected */
@@ -414,7 +434,7 @@ STATIC void Mfc_ReadNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status)
     tNFA_NDEF_EVT_DATA p_data;
 
     conn_evt_data.status = status;
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_lock(&SharedDataMutex);
 #endif
     if(NFCSTATUS_SUCCESS == status)
@@ -434,7 +454,7 @@ STATIC void Mfc_ReadNdef_Completion_Routine(void *NdefCtxt, NFCSTATUS status)
         free (NdefInfo.psUpperNdefMsg->buffer);
         NdefInfo.psUpperNdefMsg->buffer = NULL;
     }
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_unlock(&SharedDataMutex);
 #endif
     return;
@@ -619,11 +639,11 @@ NFCSTATUS Mfc_SetReadOnly(uint8_t *secrtkey, uint8_t len)
     }
     else if( (NdefInfo.is_ndef == 1) && (NdefInfo.NdefActualSize == 0) )
     {
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
         pthread_mutex_lock(&SharedDataMutex);
 #endif
         NdefInfo.psUpperNdefMsg->length = NdefInfo.NdefActualSize;
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
         pthread_mutex_unlock(&SharedDataMutex);
 #endif
         status = NFCSTATUS_SUCCESS;
@@ -667,7 +687,7 @@ NFCSTATUS Mfc_ReadNdef(void)
 
     gphNxpExtns_Context.CallBackMifare = phFriNfc_MifareStdMap_Process;
     gphNxpExtns_Context.CallBackCtxt   = NdefMap;
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_lock(&SharedDataMutex);
 #endif
     if(NdefInfo.is_ndef == 0)
@@ -729,7 +749,7 @@ Mfc_RdNdefEnd:
         }
         status = NFCSTATUS_FAILED;
     }
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_unlock(&SharedDataMutex);
 #endif
     return status;
@@ -802,7 +822,7 @@ NFCSTATUS Mfc_WriteNdef(uint8_t *p_data, uint32_t len)
     EXTNS_SetCallBackFlag(FALSE);
     gphNxpExtns_Context.CallBackMifare = phFriNfc_MifareStdMap_Process;
     gphNxpExtns_Context.CallBackCtxt   = NdefMap;
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_lock(&SharedDataMutex);
 #endif
     if( NdefInfo.is_ndef == PH_LIBNFC_INTERNAL_CHK_NDEF_NOT_DONE )
@@ -856,7 +876,7 @@ NFCSTATUS Mfc_WriteNdef(uint8_t *p_data, uint32_t len)
     }
 
 Mfc_WrNdefEnd:
-#if(NFC_NXP_NOT_OPEN_INCLUDED == TRUE)
+#if(NXP_EXTNS == TRUE)
     pthread_mutex_unlock(&SharedDataMutex);
 #endif
     if( status != NFCSTATUS_SUCCESS )
@@ -2151,4 +2171,31 @@ NFCSTATUS phFriNfc_ExtnsTransceive(phNfc_sTransceiveInfo_t *pTransceiveInfo,
     }
 
     return status;
+}
+/*******************************************************************************
+**
+** Function         Mfc_CheckNdef_timeoutcb_Routine
+**
+** Description      Callback for  Mifare check ndef
+**
+** Returns          None
+**
+**
+*******************************************************************************/
+STATIC void Mfc_CheckNdef_timeoutcb_Routine(union sigval value)
+{
+    NXPLOG_EXTNS_E(" Inside Mfc_CheckNdef_timeoutcb_Routine() ");
+    tNFA_CONN_EVT_DATA conn_evt_data;
+    /* NDEF Detection failed for other reasons */
+    conn_evt_data.ndef_detect.status = NFCSTATUS_FAILED;
+    conn_evt_data.ndef_detect.cur_size = 0;
+    conn_evt_data.ndef_detect.max_size = 0;
+    conn_evt_data.ndef_detect.flags    = RW_NDEF_FL_UNKNOWN;
+
+    /* update local flags */
+    NdefInfo.is_ndef = 0;
+    NdefInfo.NdefActualSize = conn_evt_data.ndef_detect.cur_size;
+
+    (*gphNxpExtns_Context.p_conn_cback) (NFA_NDEF_DETECT_EVT, &conn_evt_data);
+
 }

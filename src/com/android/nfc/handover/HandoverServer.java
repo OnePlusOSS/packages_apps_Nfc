@@ -38,7 +38,7 @@ import java.util.Arrays;
 public final class HandoverServer {
     static final String HANDOVER_SERVICE_NAME = "urn:nfc:sn:handover";
     static final String TAG = "HandoverServer";
-    static final Boolean DBG = false;
+    static final Boolean DBG = Log.isLoggable(HandoverServer.TAG, Log.VERBOSE); //false;
 
     static final int MIU = 128;
 
@@ -260,4 +260,3 @@ public final class HandoverServer {
         }
     }
 }
-

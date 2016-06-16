@@ -86,7 +86,7 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
                 handleBluetoothStateChanged(intent);
             }
         }
-    };
+   };
 
     public PeripheralHandoverService() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -99,7 +99,6 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         synchronized (sLock) {
             if (mStartId != 0) {
                 mStartId = startId;
@@ -194,7 +193,9 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
                 }
             }
         } else if (state == BluetoothAdapter.STATE_OFF) {
-            mBluetoothEnabledByNfc = false;
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            //mBluetoothEnabledByNfc = false;
+            Log.e(TAG, "PeripheralHandoverService BluetoothAdapter.STATE_OFF ");
             mBluetoothHeadsetConnected = false;
         }
     }
@@ -240,13 +241,18 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
     void disableBluetoothIfNeeded() {
         if (!mBluetoothEnabledByNfc) return;
 
+        Log.e(TAG, "disableBluetoothIfNeeded mBluetoothEnabledByNfc= " +mBluetoothEnabledByNfc);
         if (!mBluetoothHeadsetConnected) {
-            mBluetoothAdapter.disable();
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            if(mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothAdapter.disable();
+            }
             mBluetoothEnabledByNfc = false;
         }
     }
 
-    @Override
+   @Override
     public IBinder onBind(Intent intent) {
         return null;
     }

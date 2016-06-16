@@ -28,11 +28,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.nfc.BeamShareData;
+import android.os.UserHandle;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.UserHandle;
 import android.util.Log;
 import android.webkit.URLUtil;
 
@@ -143,7 +143,13 @@ public class BeamShareActivity extends Activity {
                 ClipData.Item item = clipData.getItemAt(i);
                 // First try to get an Uri
                 Uri uri = item.getUri();
-                String plainText = item.coerceToText(this).toString();
+                String plainText = null;
+                try {
+                    plainText = item.coerceToText(this).toString();
+                } catch (IllegalStateException e) {
+                    if (DBG) Log.d(TAG, e.getMessage());
+                    continue;
+                }
                 if (uri != null) {
                     if (DBG) Log.d(TAG, "Found uri in ClipData.");
                     tryUri(uri);
@@ -209,7 +215,7 @@ public class BeamShareActivity extends Activity {
                 shareData = new BeamShareData(null, uriArray, myUserHandle, 0);
             } else {
                 // No uris left
-                shareData = new BeamShareData(null, null, myUserHandle, 0);
+                shareData = new BeamShareData(null, uriArray, myUserHandle, 0);
             }
         } else if (mNdefMessage != null) {
             shareData = new BeamShareData(mNdefMessage, null, myUserHandle, 0);

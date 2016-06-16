@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2015 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ extern UINT8 current_key[];
                           {0xFF,0XFF,0xFF,0XFF,0xFF,0XFF},\
                           {0x00,0x00,0x00,0x00,0x00,0x00}} /* Key used during NDEF format */
 
+#define PH_FRINFC_CHECK_NDEF_TIMEOUT  (2000U) /* Mifare Check Ndef timeout value in milliseconds.*/
 
 #ifndef NCI_MAX_DATA_LEN
 #define NCI_MAX_DATA_LEN 300
@@ -227,6 +228,6 @@ void Mfc_DeactivateCbackSelect(void);
 void Mfc_ActivateCback(void);
 NFCSTATUS Mfc_RecvPacket(uint8_t *buff, uint8_t buffSz);
 NFCSTATUS phNxNciExtns_MifareStd_Reconnect(void);
-NFCSTATUS Mfc_PresenceCheck (void);
+NFCSTATUS Mfc_PresenceCheck(void);
 
 #endif /* _PHNXPEXTNS_MFCRF_H_ */
