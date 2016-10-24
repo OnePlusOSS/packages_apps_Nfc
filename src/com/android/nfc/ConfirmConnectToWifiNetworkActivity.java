@@ -29,7 +29,9 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
         Intent intent = getIntent();
         mCurrentWifiConfiguration =
                 intent.getParcelableExtra(NfcWifiProtectedSetup.EXTRA_WIFI_CONFIG);
-
+        //#ifdef VENDOR_EDIT
+        mCurrentWifiConfiguration.hiddenSSID = true;
+        //#endif VENDOR_EDIT
         String printableSsid = mCurrentWifiConfiguration.getPrintableSsid();
         mAlertDialog = new AlertDialog.Builder(this,  AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
                 .setTitle(R.string.title_connect_to_network)
@@ -69,7 +71,7 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
                 public void run() {
                     if (getAndClearEnableWifiInProgress()) {
                         showFailToast();
-                        ConfirmConnectToWifiNetworkActivity.this.finish();
+                        ConfirmConnectToWifiNetworkActivity.this.finishElegantly();
                     }
                 }
             }, ENABLE_WIFI_TIMEOUT_MILLIS);
@@ -94,11 +96,13 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
                         public void onSuccess() {
                             Toast.makeText(ConfirmConnectToWifiNetworkActivity.this,
                                     R.string.status_wifi_connected, Toast.LENGTH_SHORT).show();
+                            finishElegantly();
                         }
 
                         @Override
                         public void onFailure(int reason) {
                             showFailToast();
+                            finishElegantly();
                         }
                     });
         }
@@ -113,7 +117,7 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
     @Override
     public void onDismiss(DialogInterface dialog) {
         if (!mEnableWifiInProgress) {
-            finish();
+            finishElegantly();
         }
     }
 
@@ -136,6 +140,7 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
                         doConnect(
                                 (WifiManager) ConfirmConnectToWifiNetworkActivity.this
                                         .getSystemService(Context.WIFI_SERVICE));
+                                ConfirmConnectToWifiNetworkActivity.this.finishElegantly();
                     }
                 }
             }
@@ -151,5 +156,9 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
         }
 
         return enableWifiInProgress;
+    }
+    private void finishElegantly() {
+        finish();
+        overridePendingTransition(android.R.anim.fade_in,android.R.anim.fade_out);
     }
 }

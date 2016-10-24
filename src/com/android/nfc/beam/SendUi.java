@@ -473,6 +473,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
             mFireflyRenderer.stop();
         }
 
+        mBlackLayer.setVisibility(View.GONE);
         mTextHint.setVisibility(View.GONE);
         mTextRetry.setVisibility(View.GONE);
 

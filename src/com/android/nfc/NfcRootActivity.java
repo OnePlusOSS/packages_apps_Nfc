@@ -22,6 +22,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.UserHandle;
+import android.util.Log;
 
 public class NfcRootActivity extends Activity {
 
@@ -37,6 +38,8 @@ public class NfcRootActivity extends Activity {
                 try {
                     startActivityAsUser(launchIntent, UserHandle.CURRENT);
                 } catch (ActivityNotFoundException e) {
+                } catch (SecurityException e) {
+                    e.printStackTrace(); 
                 }
             }
         }

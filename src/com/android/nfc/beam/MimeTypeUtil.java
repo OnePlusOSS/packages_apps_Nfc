@@ -18,7 +18,9 @@ package com.android.nfc.beam;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.database.Cursor;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
@@ -31,19 +33,65 @@ public final class MimeTypeUtil {
     public static String getMimeTypeForUri(Context context, Uri uri) {
         if (uri.getScheme() == null) return null;
 
+        String mimeType = null;
         if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
             ContentResolver cr = context.getContentResolver();
-            return cr.getType(uri);
+            mimeType = cr.getType(uri);
+
+            if(mimeType == null){
+                 String extension = MimeTypeMap.getFileExtensionFromUrl(
+                         getRealFilePath(context,uri)).toLowerCase();
+                  if (extension != null) {
+                      mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+                  }
+            }
+
+            if (mimeType == null) {
+                mimeType = "*.*";
+            }
         } else if (uri.getScheme().equals(ContentResolver.SCHEME_FILE)) {
-            String extension = MimeTypeMap.getFileExtensionFromUrl(uri.getPath()).toLowerCase();
+            /*allow to parse chinese file name*/
+            String path = uri.toString().substring("file://".length());
+            //String extension = MimeTypeMap.getFileExtensionFromUrl(uri.getPath()).toLowerCase();
+            String extension = MimeTypeMap.getFileExtensionFromUrl(path).toLowerCase();
             if (extension != null) {
-                return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
-            } else {
-                return null;
+                mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+            }
+
+            if (mimeType == null) {
+                mimeType = "*.*";
             }
         } else {
             Log.d(TAG, "Could not determine mime type for Uri " + uri);
-            return null;
+            mimeType = null;
         }
+
+        return mimeType;
+    }
+
+
+
+    public static String getRealFilePath(final Context context, final Uri uri) {
+        if (null == uri) return null;
+        final String scheme = uri.getScheme();
+        String data = null;
+        if (scheme == null)
+            data = uri.getPath();
+        else if (ContentResolver.SCHEME_FILE.equals(scheme)) {
+            data = uri.getPath();
+        } else if (ContentResolver.SCHEME_CONTENT.equals(scheme)) {
+            Cursor cursor = context.getContentResolver().query(uri,
+                    new String[]{MediaStore.Images.ImageColumns.DATA}, null, null, null);
+            if (null != cursor) {
+                if (cursor.moveToFirst()) {
+                    int index = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
+                    if (index > -1) {
+                        data = cursor.getString(index);
+                    }
+                }
+                cursor.close();
+            }
+        }
+        return data;
     }
 }

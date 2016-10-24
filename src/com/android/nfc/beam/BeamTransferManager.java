@@ -26,6 +26,8 @@ import android.bluetooth.BluetoothDevice;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
+import android.content.pm.PackageManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Environment;
@@ -34,6 +36,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
 import android.os.UserHandle;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import java.io.File;
@@ -42,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -251,7 +255,8 @@ public class BeamTransferManager implements Handler.Callback,
     }
 
     public boolean isRunning() {
-        if (mState != STATE_NEW && mState != STATE_IN_PROGRESS && mState != STATE_W4_NEXT_TRANSFER) {
+        if (mState != STATE_NEW && mState != STATE_IN_PROGRESS && mState != STATE_W4_NEXT_TRANSFER
+            && mState != STATE_CANCELLING) {
             return false;
         } else {
             return true;
@@ -413,22 +418,10 @@ public class BeamTransferManager implements Handler.Callback,
             }
         }
 
-        // We can either add files to the media provider, or provide an ACTION_VIEW
-        // intent to the file directly. We base this decision on the mime type
-        // of the first file; if it's media the platform can deal with,
-        // use the media provider, if it's something else, just launch an ACTION_VIEW
-        // on the file.
-        String mimeType = mMimeTypes.get(mPaths.get(0));
-        if (mimeType.startsWith("image/") || mimeType.startsWith("video/") ||
-                mimeType.startsWith("audio/")) {
-            String[] arrayPaths = new String[mPaths.size()];
-            MediaScannerConnection.scanFile(mContext, mPaths.toArray(arrayPaths), null, this);
-            updateStateAndNotification(STATE_W4_MEDIA_SCANNER);
-        } else {
-            // We're done.
-            updateStateAndNotification(STATE_SUCCESS);
-        }
-
+        // add files to media provider
+        String[] arrayPaths = new String[mPaths.size()];
+        MediaScannerConnection.scanFile(mContext, mPaths.toArray(arrayPaths), null, this);
+        updateStateAndNotification(STATE_W4_MEDIA_SCANNER);
     }
 
     public boolean handleMessage(Message msg) {
@@ -469,9 +462,15 @@ public class BeamTransferManager implements Handler.Callback,
         String filePath = mPaths.get(0);
         Uri mediaUri = mMediaUris.get(filePath);
         Uri uri =  mediaUri != null ? mediaUri :
-            Uri.parse(ContentResolver.SCHEME_FILE + "://" + filePath);
+        FileProvider.getUriForFile(mContext, "com.android.nfc.fileprovider", new File(filePath));
+        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         viewIntent.setDataAndTypeAndNormalize(uri, mMimeTypes.get(filePath));
         viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        List<ResolveInfo> resInfoList = mContext.getPackageManager().queryIntentActivities(viewIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            mContext.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
         return viewIntent;
     }
 

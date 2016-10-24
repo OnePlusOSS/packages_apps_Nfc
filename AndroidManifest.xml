@@ -39,6 +39,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -53,6 +54,17 @@
     <uses-permission android:name="com.android.permission.WHITELIST_BLUETOOTH_DEVICE" />
     <uses-permission android:name="android.permission.DISPATCH_NFC_MESSAGE" />
     <uses-permission android:name="android.permission.OVERRIDE_WIFI_CONFIG" />
+    <uses-permission android:name="android.permission.DEVICE_POWER" />
+    <uses-permission android:name="android.permission.USER_ACTIVITY" />
+    <permission-group android:name ="com.gsma.services.nfc.permission"
+                      android:label ="@string/permgrouplab_NFC"
+                      android:description="@string/permgroupdesc_NFC"
+                      android:priority="270" />
+    <permission android:name="com.gsma.services.nfc.permission.TRANSACTION_EVENT"
+                android:permissionGroup = "com.gsma.services.nfc.permission"
+                android:label= "@string/permlab_nfcReceiveEvent"
+                android:description = "@string/permdesc_nfcReceiveEvent" />
+
     <application android:name=".NfcApplication"
                  android:icon="@drawable/icon"
                  android:label="@string/app_name"
@@ -79,6 +91,13 @@
             android:multiprocess="true"
         />
 
+        <activity android:name=".EnableNfcDialogActivity"
+            android:finishOnCloseSystemDialogs="true"
+            android:excludeFromRecents="true"
+            android:clearTaskOnLaunch="true"
+            android:multiprocess="true"
+        />
+
         <activity android:name=".cardemulation.DefaultRemovedActivity"
             android:theme="@*android:style/Theme.Material.Dialog.Alert"
             android:finishOnCloseSystemDialogs="true"
@@ -94,20 +113,20 @@
             android:multiprocess="true"
         />
         <activity android:name=".NfcRootActivity"
-            android:theme="@*android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@*android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:excludeFromRecents="true"
             android:noHistory="true"
         />
         <activity android:name=".handover.ConfirmConnectActivity"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:noHistory="true"
         />
 
         <activity android:name=".BeamShareActivity"
             android:finishOnCloseSystemDialogs="true"
-            android:theme="@android:style/Theme.Translucent"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:label="@string/android_beam"
             android:noHistory="true"
             android:excludeFromRecents="true">
@@ -125,7 +144,7 @@
         <activity android:name=".ConfirmConnectToWifiNetworkActivity"
             android:finishOnCloseSystemDialogs="true"
             android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
             android:noHistory="true"
         />
 
@@ -138,5 +157,14 @@
 
         <service android:name=".handover.PeripheralHandoverService"
         />
+        <provider
+            android:name="android.support.v4.content.FileProvider"
+            android:authorities="com.android.nfc.fileprovider"
+            android:grantUriPermissions="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
     </application>
 </manifest>
