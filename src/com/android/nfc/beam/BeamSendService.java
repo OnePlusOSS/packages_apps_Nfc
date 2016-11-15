@@ -61,7 +61,7 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
 
     @Override
     public void onCreate() {
-        super.onCreate();
+       super.onCreate();
 
         // register BT state receiver
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
@@ -84,7 +84,7 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
 
         BeamTransferRecord transferRecord;
         if (intent == null ||
-                (transferRecord = intent.getParcelableExtra(EXTRA_BEAM_TRANSFER_RECORD)) == null) {
+               (transferRecord = intent.getParcelableExtra(EXTRA_BEAM_TRANSFER_RECORD)) == null) {
             if (DBG) Log.e(TAG, "No transfer record provided. Stopping.");
             stopSelf(startId);
             return START_NOT_STICKY;
@@ -153,8 +153,10 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
                     mTransferManager.mDataLinkType == BeamTransferRecord.DATA_LINK_TYPE_BLUETOOTH) {
                 mTransferManager.start();
             }
-        } else if (state == BluetoothAdapter.STATE_OFF) {
-            mBluetoothEnabledByNfc = false;
+       } else if (state == BluetoothAdapter.STATE_OFF) {
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            //mBluetoothEnabledByNfc = false;
+            Log.e(TAG, "BeamSendService BluetoothAdapter.STATE_OFF ");
         }
     }
 
@@ -177,10 +179,14 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
             if (DBG) Log.d(TAG, "Transfer failed, final state: " +
                     Integer.toString(transfer.mState));
         }
-
+        Log.e(TAG, "onTransferComplete mBluetoothEnabledByNfc= " +mBluetoothEnabledByNfc);
         if (mBluetoothEnabledByNfc) {
             mBluetoothEnabledByNfc = false;
-            mBluetoothAdapter.disable();
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            if(mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothAdapter.disable();
+            }
         }
 
         invokeCompleteCallback(success);

@@ -41,7 +41,9 @@ public class BeamReceiveService extends Service implements BeamTransferManager.C
                 int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE,
                         BluetoothAdapter.ERROR);
                 if (state == BluetoothAdapter.STATE_OFF) {
-                    mBluetoothEnabledByNfc = false;
+                    /*finx RAIN-11381 android beam tansmit unfinish*/
+                    //mBluetoothEnabledByNfc = false;
+                    Log.e(TAG, "BeamReceiveService BluetoothAdapter.STATE_OFF ");
                 }
             }
         }
@@ -88,6 +90,7 @@ public class BeamReceiveService extends Service implements BeamTransferManager.C
     @Override
     public void onDestroy() {
         super.onDestroy();
+
         if (mBeamStatusReceiver != null) {
             unregisterReceiver(mBeamStatusReceiver);
         }
@@ -145,10 +148,15 @@ public class BeamReceiveService extends Service implements BeamTransferManager.C
             if (DBG) Log.d(TAG, "Transfer failed, final state: " +
                     Integer.toString(transfer.mState));
         }
+        Log.e(TAG, "onTransferComplete mBluetoothEnabledByNfc= " +mBluetoothEnabledByNfc);
 
         if (mBluetoothEnabledByNfc) {
             mBluetoothEnabledByNfc = false;
-            mBluetoothAdapter.disable();
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            if(mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothAdapter.disable();
+            }
         }
 
         invokeCompleteCallback(success);

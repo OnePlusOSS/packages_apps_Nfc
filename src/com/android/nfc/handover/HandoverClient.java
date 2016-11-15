@@ -30,7 +30,7 @@ import java.util.Arrays;
 public final class HandoverClient {
     private static final String TAG = "HandoverClient";
     private static final int MIU = 128;
-    private static final boolean DBG = false;
+    private static final boolean DBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final int DISCONNECTED = 0;
     private static final int CONNECTING = 1;

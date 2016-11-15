@@ -16,12 +16,12 @@
 
 package com.android.nfc;
 
-import com.android.nfc.beam.SendUi;
-
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Vibrator;
+import com.android.nfc.beam.SendUi;
+import android.util.Log;
 
 /**
  * Manages vibration, sound and animation for P2P events.
@@ -68,6 +68,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pInRange() {
+        if (DBG) Log.d(TAG, "onP2pInRange");
         mNdefSent = false;
         mNdefReceived = false;
         mInDebounce = false;
@@ -79,6 +80,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pNfcTapRequested() {
+        if (DBG) Log.d(TAG, "onP2pNfcTapRequested");
         mNfcService.playSound(NfcService.SOUND_START);
         mNdefSent = false;
         mNdefReceived = false;
@@ -93,6 +95,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pTimeoutWaitingForLink() {
+        if (DBG) Log.d(TAG, "onP2pTimeoutWaitingForLink");
         if (mSendUi != null) {
             mSendUi.finish(SendUi.FINISH_SCALE_UP);
         }
@@ -100,6 +103,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pSendConfirmationRequested() {
+        if (DBG) Log.d(TAG, "onP2pSendConfirmationRequested");
         mNfcService.playSound(NfcService.SOUND_START);
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         if (mSendUi != null) {
@@ -111,6 +115,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pSendComplete() {
+        if (DBG) Log.d(TAG, "onP2pSendComplete");
         mNfcService.playSound(NfcService.SOUND_END);
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         if (mSendUi != null) {
@@ -122,6 +127,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pHandoverNotSupported() {
+        if (DBG) Log.d(TAG, "onP2pHandoverNotSupported");
         mNfcService.playSound(NfcService.SOUND_ERROR);
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         mSendUi.finishAndToast(SendUi.FINISH_SCALE_UP,
@@ -132,6 +138,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pHandoverBusy() {
+        if (DBG) Log.d(TAG, "onP2pHandoverBusy");
         mNfcService.playSound(NfcService.SOUND_ERROR);
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         mSendUi.finishAndToast(SendUi.FINISH_SCALE_UP, mContext.getString(R.string.beam_busy));
@@ -141,6 +148,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pReceiveComplete(boolean playSound) {
+        if (DBG) Log.d(TAG, "onP2pReceiveComplete");
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         if (playSound) mNfcService.playSound(NfcService.SOUND_END);
         if (mSendUi != null) {
@@ -158,6 +166,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pOutOfRange() {
+        if (DBG) Log.d(TAG, "onP2pOutOfRange");
         if (mSending) {
             mNfcService.playSound(NfcService.SOUND_ERROR);
             mSending = false;
@@ -170,6 +179,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onSendConfirmed() {
+        if (DBG) Log.d(TAG, "onSendConfirmed");
         if (!mSending) {
             if (mSendUi != null) {
                 mSendUi.showStartSend();
@@ -182,12 +192,14 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onCanceled() {
+        if (DBG) Log.d(TAG, "onCanceled");
         mSendUi.finish(SendUi.FINISH_SCALE_UP);
         mCallback.onP2pCanceled();
     }
 
     @Override
     public void onP2pSendDebounce() {
+        if (DBG) Log.d(TAG, "onP2pSendDebounce");
         mInDebounce = true;
         mNfcService.playSound(NfcService.SOUND_ERROR);
         if (mSendUi != null) {
@@ -197,6 +209,7 @@ public class P2pEventManager implements P2pEventListener, SendUi.Callback {
 
     @Override
     public void onP2pResumeSend() {
+        if (DBG) Log.d(TAG, "onP2pResumeSend");
         mVibrator.vibrate(VIBRATION_PATTERN, -1);
         mNfcService.playSound(NfcService.SOUND_START);
         if (mInDebounce) {

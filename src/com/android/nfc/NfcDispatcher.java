@@ -17,7 +17,6 @@
 package com.android.nfc;
 
 import android.bluetooth.BluetoothAdapter;
-
 import com.android.nfc.RegisteredComponentCache.ComponentInfo;
 import com.android.nfc.handover.HandoverDataParser;
 import com.android.nfc.handover.PeripheralHandoverService;
@@ -60,8 +59,8 @@ import java.util.List;
  * Dispatch of NFC events to start activities
  */
 class NfcDispatcher {
-    private static final boolean DBG = false;
     private static final String TAG = "NfcDispatcher";
+    private static final boolean DBG = Log.isLoggable(TAG, Log.VERBOSE);
 
     static final int DISPATCH_SUCCESS = 1;
     static final int DISPATCH_FAIL = 2;
@@ -250,14 +249,14 @@ class NfcDispatcher {
         Ndef ndef = Ndef.get(tag);
         if (ndef != null) {
             message = ndef.getCachedNdefMessage();
-        } else {
+        }else {
             NfcBarcode nfcBarcode = NfcBarcode.get(tag);
             if (nfcBarcode != null && nfcBarcode.getType() == NfcBarcode.TYPE_KOVIO) {
                 message = decodeNfcBarcodeUri(nfcBarcode);
             }
         }
 
-        if (DBG) Log.d(TAG, "dispatch tag: " + tag.toString() + " message: " + message);
+        Log.d(TAG, "dispatch tag: " + tag.toString() + " message: " + message);
 
         DispatchInfo dispatch = new DispatchInfo(mContext, tag, message);
 
@@ -354,7 +353,7 @@ class NfcDispatcher {
         // All tags of NfcBarcode technology and Kovio type have lengths of a multiple of 16 bytes
         if (tagId.length >= 4
                 && (tagId[1] == URI_PREFIX_HTTP_WWW || tagId[1] == URI_PREFIX_HTTPS_WWW
-                    || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
+                || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
             // Look for optional URI terminator (0xfe), used to indicate the end of a URI prior to
             // the end of the full NfcBarcode payload. No terminator means that the URI occupies the
             // entire length of the payload field. Exclude checking the CRC in the final two bytes
@@ -593,7 +592,6 @@ class NfcDispatcher {
 
         return true;
     }
-
 
     /**
      * Tells the ActivityManager to resume allowing app switches.

@@ -27,8 +27,9 @@ import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 
 public class ForegroundUtils extends IProcessObserver.Stub {
-    static final boolean DBG = false;
     private final String TAG = "ForegroundUtils";
+    private boolean DBG = Log.isLoggable(TAG, Log.VERBOSE);
+
     private final IActivityManager mIActivityManager;
 
     private final Object mLock = new Object();

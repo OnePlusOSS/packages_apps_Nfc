@@ -88,7 +88,7 @@ import android.widget.Toast;
 public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
         TimeAnimator.TimeListener, TextureView.SurfaceTextureListener, android.view.Window.Callback {
     static final String TAG = "SendUi";
-
+    static final boolean DBG = true;
     static final float INTERMEDIATE_SCALE = 0.6f;
 
     static final float[] PRE_SCREENSHOT_SCALE = {1.0f, INTERMEDIATE_SCALE};
@@ -165,7 +165,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     final ObjectAnimator mAlphaUpAnimator;
     final AnimatorSet mSuccessAnimatorSet;
 
-    // Besides animating the screenshot, the Beam UI also renders
+   // Besides animating the screenshot, the Beam UI also renders
     // fireflies on platforms where we can do hardware-acceleration.
     // Firefly rendering is only started once the initial
     // "pre-animation" has scaled down the screenshot, to avoid
@@ -194,6 +194,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     }
 
     public SendUi(Context context, Callback callback) {
+        if (DBG) Log.d(TAG, "SendUi");
         mContext = context;
         mCallback = callback;
 
@@ -323,6 +324,8 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
 
     /** Show pre-send animation */
     public void showPreSend(boolean promptToNfcTap) {
+        Log.e(TAG, "showPreSend "+ promptToNfcTap);
+
         switch (mState) {
             case STATE_IDLE:
                 Log.e(TAG, "Unexpected showPreSend() in STATE_IDLE");
@@ -409,6 +412,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
 
     /** Show starting send animation */
     public void showStartSend() {
+        if (DBG) Log.d(TAG, "showStartSend");
         if (mState < STATE_SENDING) return;
 
         mTextRetry.setVisibility(View.GONE);
@@ -424,7 +428,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
 
         float currentAlpha = mBlackLayer.getAlpha();
         if (mBlackLayer.isShown() && currentAlpha > 0.0f) {
-            PropertyValuesHolder alphaDown = PropertyValuesHolder.ofFloat("alpha",
+           PropertyValuesHolder alphaDown = PropertyValuesHolder.ofFloat("alpha",
                     new float[] {currentAlpha, 0.0f});
             mAlphaDownAnimator.setValues(alphaDown);
             mAlphaDownAnimator.start();
@@ -440,6 +444,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
 
     /** Return to initial state */
     public void finish(int finishMode) {
+        if (DBG) Log.d(TAG, "finish mState="+mState);
         switch (mState) {
             case STATE_IDLE:
                 return;
@@ -509,6 +514,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     }
 
     void dismiss() {
+        if (DBG) Log.d(TAG, "dismiss mState="+mState);
         if (mState < STATE_W4_TOUCH) return;
         // Immediately set to IDLE, to prevent .cancel() calls
         // below from immediately calling into dismiss() again.
@@ -550,11 +556,13 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     final class ScreenshotTask extends AsyncTask<Void, Void, Bitmap> {
         @Override
         protected Bitmap doInBackground(Void... params) {
+            if (DBG) Log.d(TAG, "doInBackground ");
             return createScreenshot();
         }
 
         @Override
         protected void onPostExecute(Bitmap result) {
+            if (DBG) Log.d(TAG, "onPostExecute mState="+mState);
             if (mState == STATE_W4_SCREENSHOT) {
                 // Screenshot done, wait for request to start preSend anim
                 mScreenshotBitmap = result;
@@ -581,10 +589,11 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
         }
     };
 
-    /**
+   /**
      * Returns a screenshot of the current display contents.
      */
     Bitmap createScreenshot() {
+        if (DBG) Log.d(TAG, "createScreenshot ");
         // We need to orient the screenshot correctly (and the Surface api seems to
         // take screenshots only in the natural orientation of the device :!)
         mDisplay.getRealMetrics(mDisplayMetrics);
@@ -610,7 +619,7 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
             // Get the dimensions of the device in its native orientation
             mDisplayMatrix.reset();
             mDisplayMatrix.preRotate(-degrees);
-            mDisplayMatrix.mapPoints(dims);
+           mDisplayMatrix.mapPoints(dims);
             dims[0] = Math.abs(dims[0]);
             dims[1] = Math.abs(dims[1]);
         }
@@ -620,7 +629,6 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
         if (bitmap == null) {
             return null;
         }
-
         if (requiresRotation) {
             // Rotate the screenshot to the current orientation
             Bitmap ss = Bitmap.createBitmap(mDisplayMetrics.widthPixels,
@@ -828,7 +836,6 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     public boolean onMenuOpened(int featureId, Menu menu) {
         return false;
     }
-
     @Override
     public boolean onMenuItemSelected(int featureId, MenuItem item) {
         return false;
@@ -859,10 +866,9 @@ public class SendUi implements Animator.AnimatorListener, View.OnTouchListener,
     public void onPanelClosed(int featureId, Menu menu) {
 
     }
-
     @Override
     public boolean onSearchRequested(SearchEvent searchEvent) {
-        return onSearchRequested();
+         return onSearchRequested();
     }
 
     @Override

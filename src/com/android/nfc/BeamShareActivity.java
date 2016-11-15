@@ -28,11 +28,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.nfc.BeamShareData;
+import android.os.Handler;
+import android.os.UserHandle;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.UserHandle;
 import android.util.Log;
 import android.webkit.URLUtil;
 
@@ -50,7 +51,10 @@ import com.android.internal.R;
  */
 public class BeamShareActivity extends Activity {
     static final String TAG ="BeamShareActivity";
-    static final boolean DBG = false;
+    static final boolean DBG =  Log.isLoggable(TAG, Log.VERBOSE);
+
+    static final int DELAYTIME = 200;
+    static final Handler mHandler=new Handler();
 
     ArrayList<Uri> mUris;
     NdefMessage mNdefMessage;
@@ -143,7 +147,13 @@ public class BeamShareActivity extends Activity {
                 ClipData.Item item = clipData.getItemAt(i);
                 // First try to get an Uri
                 Uri uri = item.getUri();
-                String plainText = item.coerceToText(this).toString();
+                String plainText = null;
+                try {
+                    plainText = item.coerceToText(this).toString();
+                } catch (IllegalStateException e) {
+                    if (DBG) Log.d(TAG, e.getMessage());
+                    continue;
+                }
                 if (uri != null) {
                     if (DBG) Log.d(TAG, "Found uri in ClipData.");
                     tryUri(uri);
@@ -188,7 +198,7 @@ public class BeamShareActivity extends Activity {
             }
         }
 
-        BeamShareData shareData = null;
+        final BeamShareData shareData;
         UserHandle myUserHandle = new UserHandle(UserHandle.myUserId());
         if (mUris.size() > 0) {
             // Uris have our first preference for sharing
@@ -209,7 +219,7 @@ public class BeamShareActivity extends Activity {
                 shareData = new BeamShareData(null, uriArray, myUserHandle, 0);
             } else {
                 // No uris left
-                shareData = new BeamShareData(null, null, myUserHandle, 0);
+                shareData = new BeamShareData(null, uriArray, myUserHandle, 0);
             }
         } else if (mNdefMessage != null) {
             shareData = new BeamShareData(mNdefMessage, null, myUserHandle, 0);
@@ -219,8 +229,17 @@ public class BeamShareActivity extends Activity {
             // Activity may have set something to share over NFC, so pass on anyway
             shareData = new BeamShareData(null, null, myUserHandle, 0);
         }
-        mNfcAdapter.invokeBeam(shareData);
-        finish();
+
+        // VENDOR_EDIT
+        // chenyihuang@oneplus.connectivity,2016.11.05
+        // add a little delayed for waiting previous animation finished
+        mHandler.postDelayed(new Runnable() {
+             @Override
+             public void run() {
+                mNfcAdapter.invokeBeam(shareData);
+                finish();
+            }
+        },DELAYTIME);
     }
 
     final BroadcastReceiver mReceiver = new BroadcastReceiver() {

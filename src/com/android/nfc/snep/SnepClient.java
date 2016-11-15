@@ -27,7 +27,7 @@ import java.io.IOException;
 
 public final class SnepClient {
     private static final String TAG = "SnepClient";
-    private static final boolean DBG = false;
+    private static final boolean DBG = Log.isLoggable(TAG, Log.VERBOSE);//false;
     private static final int DEFAULT_ACCEPTABLE_LENGTH = 100*1024;
     private static final int DEFAULT_MIU = 128;
     private static final int DEFAULT_RWSIZE = 1;

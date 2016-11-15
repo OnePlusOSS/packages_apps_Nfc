@@ -51,7 +51,7 @@ import com.android.nfc.R;
  */
 public class BluetoothPeripheralHandover implements BluetoothProfile.ServiceListener {
     static final String TAG = "BluetoothPeripheralHandover";
-    static final boolean DBG = false;
+    static final boolean DBG = false ;//Log.isLoggable(TAG, Log.VERBOSE);
 
     static final String ACTION_ALLOW_CONNECT = "com.android.nfc.handover.action.ALLOW_CONNECT";
     static final String ACTION_DENY_CONNECT = "com.android.nfc.handover.action.DENY_CONNECT";
@@ -296,7 +296,6 @@ public class BluetoothPeripheralHandover implements BluetoothProfile.ServiceList
     void nextStepConnect() {
         switch (mState) {
             case STATE_INIT_COMPLETE:
-
                 if (mDevice.getBondState() != BluetoothDevice.BOND_BONDED) {
                     requestPairConfirmation();
                     mState = STATE_WAITING_FOR_BOND_CONFIRMATION;
@@ -363,7 +362,7 @@ public class BluetoothPeripheralHandover implements BluetoothProfile.ServiceList
                         mDevice.setAlias(mName);
                         complete(true);
                     } else {
-                        toast (getToastString(R.string.connect_peripheral_failed));
+                        toast(getToastString(R.string.connected_peripheral));
                         complete(false);
                     }
                 } else {

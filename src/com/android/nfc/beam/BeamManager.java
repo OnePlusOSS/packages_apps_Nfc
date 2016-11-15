@@ -35,7 +35,7 @@ import android.util.Log;
  */
 public class BeamManager implements Handler.Callback {
     private static final String TAG = "BeamManager";
-    private static final boolean DBG = false;
+    private static final boolean DBG = Log.isLoggable(BeamManager.TAG, Log.VERBOSE); //false;
 
     private static final String ACTION_WHITELIST_DEVICE =
             "android.btopp.intent.action.WHITELIST_DEVICE";

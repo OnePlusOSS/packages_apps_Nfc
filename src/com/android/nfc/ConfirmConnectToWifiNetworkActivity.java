@@ -13,9 +13,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
 import android.widget.Toast;
+import android.util.Log;
 
 public class ConfirmConnectToWifiNetworkActivity extends Activity
         implements View.OnClickListener, DialogInterface.OnDismissListener {
+
+    private static final String TAG = ConfirmConnectToWifiNetworkActivity.class.getSimpleName();
 
     public static final int ENABLE_WIFI_TIMEOUT_MILLIS = 5000;
     private WifiConfiguration mCurrentWifiConfiguration;
@@ -25,10 +28,14 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate()");
+
 
         Intent intent = getIntent();
         mCurrentWifiConfiguration =
                 intent.getParcelableExtra(NfcWifiProtectedSetup.EXTRA_WIFI_CONFIG);
+
+        Log.d(TAG, "mCurrentWifiConfiguration() "+mCurrentWifiConfiguration);
 
         String printableSsid = mCurrentWifiConfiguration.getPrintableSsid();
         mAlertDialog = new AlertDialog.Builder(this,  AlertDialog.THEME_DEVICE_DEFAULT_LIGHT)
@@ -60,15 +67,20 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
     public void onClick(View v) {
         WifiManager wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
 
+        Log.d(TAG, "onClick()");
+
         if (!wifiManager.isWifiEnabled()) {
             wifiManager.setWifiEnabled(true);
             mEnableWifiInProgress = true;
+            Log.d(TAG, "set mEnableWifiInProgress to true");
 
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
+                    Log.d(TAG, "enable wifi timeout Runnable");
                     if (getAndClearEnableWifiInProgress()) {
                         showFailToast();
+                        Log.d(TAG, " onClick enable wifi timeout finish()");
                         ConfirmConnectToWifiNetworkActivity.this.finish();
                     }
                 }
@@ -77,28 +89,41 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
         } else {
             doConnect(wifiManager);
         }
+        Log.d(TAG, "AlertDialog.dismiss()");
 
         mAlertDialog.dismiss();
     }
 
     private void doConnect(WifiManager wifiManager) {
+        Log.d(TAG, "doConnect(.) wifiManager.addNetwork(.)");
+
         int networkId = wifiManager.addNetwork(mCurrentWifiConfiguration);
+
+        Log.d(TAG, "networkId:" + networkId);
 
         if (networkId < 0) {
             showFailToast();
+            Log.d(TAG, "networkId < 0 finish()"+networkId);
+            finish();
         } else {
+
+            Log.d(TAG, "wifiManager.connect(..)  networkId:"+networkId);
 
             wifiManager.connect(networkId,
                     new WifiManager.ActionListener() {
                         @Override
                         public void onSuccess() {
+                            Log.d(TAG, "onSuccess() Toast show connected ,finish()");
                             Toast.makeText(ConfirmConnectToWifiNetworkActivity.this,
                                     R.string.status_wifi_connected, Toast.LENGTH_SHORT).show();
+                            finish();
                         }
 
                         @Override
                         public void onFailure(int reason) {
                             showFailToast();
+                            Log.d(TAG, "onFailure() finish() reason "+reason);
+                            finish();
                         }
                     });
         }
@@ -106,13 +131,16 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
 
 
     private void showFailToast() {
+        Log.d(TAG, "showFailToast ");
         Toast.makeText(ConfirmConnectToWifiNetworkActivity.this,
                 R.string.status_unable_to_connect, Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onDismiss(DialogInterface dialog) {
+        Log.d(TAG, "onDismiss() mEnableWifiInProgress:" + mEnableWifiInProgress);
         if (!mEnableWifiInProgress) {
+            Log.d(TAG, "onDismiss finish()");
             finish();
         }
     }
@@ -120,6 +148,13 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
 
     @Override
     protected void onDestroy() {
+        Log.d(TAG, "onDestroy()");
+        boolean isDialogShow = mAlertDialog.isShowing();
+        Log.d(TAG, "mAlertDialog.isShowing():" + isDialogShow);
+
+        if (mAlertDialog != null && isDialogShow) {
+            mAlertDialog.dismiss();
+        }
         ConfirmConnectToWifiNetworkActivity.this.unregisterReceiver(mBroadcastReceiver);
         super.onDestroy();
     }
@@ -128,8 +163,10 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            Log.d(TAG, "onReceive() action:" + action);
             if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
                 int wifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, 0);
+                Log.d(TAG, "wifiState:" + wifiState);
                 if (mCurrentWifiConfiguration != null
                         && wifiState == WifiManager.WIFI_STATE_ENABLED) {
                     if (getAndClearEnableWifiInProgress()) {
@@ -144,6 +181,8 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
 
     private boolean getAndClearEnableWifiInProgress() {
         boolean enableWifiInProgress;
+        Log.d(TAG, "getAndClearEnableWifiInProgress()  mEnableWifiInProgress:"
+                + mEnableWifiInProgress);
 
         synchronized (this)  {
             enableWifiInProgress = mEnableWifiInProgress;

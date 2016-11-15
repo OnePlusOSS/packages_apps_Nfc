@@ -237,6 +237,8 @@ public class BeamTransferManager implements Handler.Callback,
             Log.e(TAG, "Handover transfer failed");
             // Do wait to see if there's another file coming.
         }
+        Log.d(TAG, "uri " + uri + " success " + success +" mCurrentCount " + mCurrentCount + " mTotalCount " + mTotalCount);
+
         mHandler.removeMessages(MSG_NEXT_TRANSFER_TIMER);
         if (mCurrentCount == mTotalCount) {
             if (mIncoming) {
@@ -288,14 +290,15 @@ public class BeamTransferManager implements Handler.Callback,
     }
 
     void updateNotification() {
+        if(DBG && mState != STATE_IN_PROGRESS ) Log.i(TAG,"updateNotification mState= "+mState +" stack ",new Throwable());
         Builder notBuilder = new Notification.Builder(mContext);
         notBuilder.setColor(mContext.getResources().getColor(
                 com.android.internal.R.color.system_notification_accent_color));
         notBuilder.setWhen(mStartTime);
         notBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
         String beamString;
-        if (mIncoming) {
-            beamString = mContext.getString(R.string.beam_progress);
+       if (mIncoming) {
+           beamString = mContext.getString(R.string.beam_progress);
         } else {
             beamString = mContext.getString(R.string.beam_outgoing);
         }
@@ -317,7 +320,7 @@ public class BeamTransferManager implements Handler.Callback,
                 notBuilder.setProgress(100, (int) (100 * progress), false);
             } else {
                 notBuilder.setProgress(100, 0, true);
-            }
+           }
         } else if (mState == STATE_SUCCESS) {
             notBuilder.setAutoCancel(true);
             notBuilder.setSmallIcon(mIncoming ? android.R.drawable.stat_sys_download_done :
@@ -397,7 +400,7 @@ public class BeamTransferManager implements Handler.Callback,
             Uri uri = mUris.get(i);
             String mimeType = mTransferMimeTypes.get(i);
 
-            File srcFile = new File(uri.getPath());
+           File srcFile = new File(uri.getPath());
 
             File dstFile = generateUniqueDestination(beamPath.getAbsolutePath(),
                     uri.getLastPathSegment());
@@ -473,7 +476,7 @@ public class BeamTransferManager implements Handler.Callback,
         viewIntent.setDataAndTypeAndNormalize(uri, mMimeTypes.get(filePath));
         viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         return viewIntent;
-    }
+   }
 
     PendingIntent buildCancelIntent() {
         Intent intent = new Intent(BeamStatusReceiver.ACTION_CANCEL_HANDOVER_TRANSFER);
@@ -515,11 +518,10 @@ public class BeamTransferManager implements Handler.Callback,
         while (dstFile.exists()) {
             dstFile = new File(path + File.separator + fileNameWithoutExtension + "-" +
                     Integer.toString(count) + extension);
-            count++;
+           count++;
         }
         return dstFile;
     }
-
     static File generateMultiplePath(String beamRoot) {
         // Generate a unique directory with the date
         String format = "yyyy-MM-dd";
@@ -536,4 +538,3 @@ public class BeamTransferManager implements Handler.Callback,
         return newFile;
     }
 }
-
