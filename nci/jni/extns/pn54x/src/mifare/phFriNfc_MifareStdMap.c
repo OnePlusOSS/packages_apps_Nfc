@@ -757,6 +757,13 @@ void phFriNfc_MifareStdMap_Process (void       *Context,
                                         NdefMap->CardState);
                     CRFlag = (uint8_t) PH_FRINFC_MIFARESTD_FLAG1;
                 }
+                /*NdefMap->StdMifareContainer.remainingSize -=
+                (((NdefMap->ApduBufferSize) > (PH_FRINFC_MIFARESTD_NDEFTLV_L -
+                                            PH_FRINFC_MIFARESTD_VAL1))?
+                                            ((uint16_t)(*NdefMap->WrNdefPacketLength +
+                                            PH_FRINFC_MIFARESTD_VAL4)):
+                                            ((uint16_t)(*NdefMap->WrNdefPacketLength +
+                                            PH_FRINFC_MIFARESTD_VAL2)));*/
                 break;
 
             case PH_FRINFC_NDEFMAP_STATE_RD_TO_WR_NDEF_LEN:
@@ -983,6 +990,10 @@ void phFriNfc_MifareStdMap_Process (void       *Context,
         else
         {
             /* Authentication has failed */
+            /* Status = phFriNfc_MifStd_H_CallDisCon(NdefMap);
+            CRFlag = (uint8_t)((Status != NFCSTATUS_PENDING)?
+                        PH_FRINFC_MIFARESTD_FLAG1:
+                        PH_FRINFC_MIFARESTD_FLAG0); */
             CRFlag = PH_FRINFC_MIFARESTD_FLAG1; /* Call Completion Routine */
             Status = NFCSTATUS_FAILED;/* Update Status Flag */
         }
@@ -1844,9 +1855,22 @@ static NFCSTATUS phFriNfc_MifStd_H_ChkRdWr (phFriNfc_NdefMap_t *NdefMap)
                 (NdefMap->StdMifareContainer.currentBlock !=
                             PH_FRINFC_MIFARESTD_MAD_BLK66))
             {
+               /* NdefMap->StdMifareContainer.currentBlock =
+                    ((NdefMap->StdMifareContainer.ReadCompleteFlag ==
+                        PH_FRINFC_MIFARESTD_FLAG1)?
+                        NdefMap->StdMifareContainer.currentBlock:
+                        (NdefMap->StdMifareContainer.currentBlock +
+                        PH_FRINFC_MIFARESTD_VAL4));
+                NdefMap->StdMifareContainer.currentBlock =
+                    ((NdefMap->StdMifareContainer.currentBlock ==
+                        PH_FRINFC_MIFARESTD_MAD_BLK64)?
+                    (NdefMap->StdMifareContainer.currentBlock +
+                    PH_FRINFC_MIFARESTD_VAL4):
+                    NdefMap->StdMifareContainer.currentBlock);*/
+
                 Result = ((NdefMap->StdMifareContainer.ReadAcsBitFlag ==
-                                PH_FRINFC_MIFARESTD_FLAG0) ?
-                                phFriNfc_MifStd_H_RdAcsBit(NdefMap) :
+                                PH_FRINFC_MIFARESTD_FLAG0)?
+                                phFriNfc_MifStd_H_RdAcsBit(NdefMap):
                                 phFriNfc_MifStd_H_AuthSector(NdefMap));
             }
             else
@@ -3687,8 +3711,8 @@ static NFCSTATUS phFriNfc_MifStd_H_ProAcsBits(phFriNfc_NdefMap_t        *NdefMap
                 {
                     NdefMap->StdMifareContainer.NFCforumSectFlag =
                         (((NdefMap->StdMifareContainer.currentBlock == 64) &&
-                        ((NdefMap->CardType == PH_FRINFC_NDEFMAP_MIFARE_STD_4K_CARD) ||
-                        (NdefMap->CardType == PH_FRINFC_NDEFMAP_MIFARE_STD_2K_CARD))) ?
+                        ((NdefMap->CardType == PH_FRINFC_NDEFMAP_MIFARE_STD_4K_CARD)||
+                        (NdefMap->CardType == PH_FRINFC_NDEFMAP_MIFARE_STD_2K_CARD)))?
                         NdefMap->StdMifareContainer.NFCforumSectFlag:
                                             PH_FRINFC_MIFARESTD_FLAG1);
                 }
@@ -4031,7 +4055,7 @@ static NFCSTATUS phFriNfc_MifStd_H_ProBytesToWr(phFriNfc_NdefMap_t        *NdefM
 
     if(*NdefMap->SendRecvLength == PH_FRINFC_MIFARESTD_BYTES_READ)
     {
-        memcpy(&NdefMap->SendRecvBuf[PH_FRINFC_MIFARESTD_VAL1],
+        memmove(&NdefMap->SendRecvBuf[PH_FRINFC_MIFARESTD_VAL1],
                     NdefMap->SendRecvBuf,
                     PH_FRINFC_MIFARESTD_BLOCK_BYTES);
 
@@ -5837,4 +5861,3 @@ static NFCSTATUS   phFriNfc_MapTool_ChkSpcVer( const phFriNfc_NdefMap_t  *NdefMa
 
     return (status);
 }
-

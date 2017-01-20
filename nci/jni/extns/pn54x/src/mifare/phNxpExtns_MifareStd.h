@@ -69,6 +69,7 @@ extern UINT8 current_key[];
                           {0xFF,0XFF,0xFF,0XFF,0xFF,0XFF},\
                           {0x00,0x00,0x00,0x00,0x00,0x00}} /* Key used during NDEF format */
 
+#define PH_FRINFC_CHECK_NDEF_TIMEOUT  (2000U) /* Mifare Check Ndef timeout value in milliseconds.*/
 
 #ifndef NCI_MAX_DATA_LEN
 #define NCI_MAX_DATA_LEN 300

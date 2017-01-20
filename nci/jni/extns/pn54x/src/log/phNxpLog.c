@@ -16,8 +16,8 @@
 
 #include <string.h>
 #if !defined (NXPLOG__H_INCLUDED)
-#    include "phNxpLog.h"
-#    include "phNxpConfig.h"
+#include "phNxpLog.h"
+#include "phNxpConfig.h"
 #endif
 #include <cutils/properties.h>
 
@@ -53,6 +53,25 @@ static uint8_t phNxpLog_SetGlobalLogLevel (void)
     uint8_t level = NXPLOG_DEFAULT_LOGLEVEL;
     unsigned long num = 0;
     char valueStr [PROPERTY_VALUE_MAX] = {0};
+	
+    property_get("persist.oem.nfc.debug", valueStr, "0");
+    if (strcmp(valueStr, "1") == 0) {
+        property_set("nfc.app_log_level", "5");
+        property_set("nfc.nxp_log_level_global", "3");
+        property_set("nfc.nxp_log_level_extns", "3");
+        property_set("nfc.nxp_log_level_hal", "3");
+        property_set("nfc.nxp_log_level_nci", "3");
+        property_set("nfc.nxp_log_level_dnld", "3");
+        property_set("nfc.nxp_log_level_tml", "3");
+    } else {
+        property_set("nfc.app_log_level", "1");
+        property_set("nfc.nxp_log_level_global", "1");
+        property_set("nfc.nxp_log_level_extns", "1");
+        property_set("nfc.nxp_log_level_hal", "1");
+        property_set("nfc.nxp_log_level_nci", "1");
+        property_set("nfc.nxp_log_level_dnld", "1");
+        property_set("nfc.nxp_log_level_tml", "1");
+    }	
 
     int len = property_get (PROP_NAME_NXPLOG_GLOBAL_LOGLEVEL, valueStr, "");
     if (len > 0)

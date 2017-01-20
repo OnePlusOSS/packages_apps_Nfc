@@ -56,6 +56,8 @@ public class BeamShareActivity extends Activity {
     NdefMessage mNdefMessage;
     NfcAdapter mNfcAdapter;
     Intent mLaunchIntent;
+    AlertDialog.Builder dialogBuilder;
+    AlertDialog dialog; 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +71,7 @@ public class BeamShareActivity extends Activity {
             finish();
         } else {
             if (!mNfcAdapter.isEnabled()) {
-                showNfcDialogAndExit(com.android.nfc.R.string.beam_requires_nfc_enabled);
+                showNfcDialogAndExit(com.android.nfc.R.string.beam_requires_nfc_enabled);            
             } else {
                 parseShareIntentAndFinish(mLaunchIntent);
             }
@@ -81,7 +83,7 @@ public class BeamShareActivity extends Activity {
         IntentFilter filter = new IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED);
         registerReceiverAsUser(mReceiver, UserHandle.ALL, filter, null, null);
 
-        AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(this,
+        dialogBuilder = new AlertDialog.Builder(this,
                 AlertDialog.THEME_DEVICE_DEFAULT_LIGHT);
         dialogBuilder.setMessage(msgId);
         dialogBuilder.setOnCancelListener(new DialogInterface.OnCancelListener() {
@@ -109,8 +111,17 @@ public class BeamShareActivity extends Activity {
                         finish();
                     }
                 });
-        dialogBuilder.show();
+        dialog = dialogBuilder.show();
     }
+	
+    @Override
+    protected void onDestroy() {          
+        if (dialog != null){
+           unregisterReceiver(mReceiver);			
+           dialog.dismiss();
+        }
+        super.onDestroy();
+    } 
 
     void tryUri(Uri uri) {
         if (uri.getScheme().equalsIgnoreCase("content") ||
