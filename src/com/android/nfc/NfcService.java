@@ -1574,7 +1574,7 @@ public class NfcService implements DeviceHostListener {
                 paramsBuilder.setEnableReaderMode(true);
             } else {
                 paramsBuilder.setTechMask(NfcDiscoveryParameters.NFC_POLL_DEFAULT);
-                paramsBuilder.setEnableP2p(mIsNdefPushEnabled);
+                paramsBuilder.setEnableP2p(true);
             }
         } else if (screenState == ScreenStateHelper.SCREEN_STATE_ON_LOCKED && mInProvisionMode) {
             paramsBuilder.setTechMask(NfcDiscoveryParameters.NFC_POLL_DEFAULT);
@@ -2193,6 +2193,10 @@ public class NfcService implements DeviceHostListener {
                 mP2pLinkManager.onUserSwitched(getUserId());
                 if (mIsHceCapable) {
                     mCardEmulationManager.onUserSwitched(getUserId());
+                }
+                int screenState = mScreenStateHelper.checkScreenState();
+                if (screenState != mScreenState) {
+                    new ApplyRoutingTask().execute(Integer.valueOf(screenState));
                 }
             }
         }
