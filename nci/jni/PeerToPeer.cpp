@@ -13,7 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+/******************************************************************************
+ *
+ *  The original Work has been changed by NXP Semiconductors.
+ *
+ *  Copyright (C) 2015 NXP Semiconductors
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ ******************************************************************************/
 /*
  *  Communicate with a peer using NFC-DEP, LLCP, SNEP.
  */
@@ -40,8 +58,10 @@ namespace android
 {
     extern void nativeNfcTag_registerNdefTypeHandler ();
     extern void nativeNfcTag_deregisterNdefTypeHandler ();
-    extern void startRfDiscovery (bool isStart);
-    extern bool isDiscoveryStarted ();
+    extern int getScreenState();
+    extern void startRfDiscovery(bool isStart);
+    extern bool isDiscoveryStarted();
+    extern int gGeneralPowershutDown;
 }
 
 
@@ -112,11 +132,13 @@ PeerToPeer& PeerToPeer::getInstance ()
 *******************************************************************************/
 void PeerToPeer::initialize ()
 {
-    ALOGD ("PeerToPeer::initialize");
+    static const char fn [] = "PeerToPeer::initialize";
     unsigned long num = 0;
 
+    ALOGD ("%s: enter", fn);
     if (GetNumValue ("P2P_LISTEN_TECH_MASK", &num, sizeof (num)))
         mP2pListenTechMask = num;
+    ALOGD ("%s: exit", fn);
 }
 
 
@@ -487,10 +509,10 @@ bool PeerToPeer::deregisterServer (tJNI_HANDLE jniHandle)
         return (false);
     }
     mMutex.unlock();
-    if (isDiscoveryStarted ())
+    if(isDiscoveryStarted())
     {
         isPollingTempStopped = true;
-        startRfDiscovery (false);
+        startRfDiscovery(false);
     }
 
     {
@@ -507,9 +529,13 @@ bool PeerToPeer::deregisterServer (tJNI_HANDLE jniHandle)
 
     removeServer (jniHandle);
 
-    if (isPollingTempStopped)
+    /*
+     * conditional check is added to avoid multiple dicovery cmds
+     * at the time of NFC OFF in progress
+     */
+    if((gGeneralPowershutDown != NFC_MODE_OFF) && isPollingTempStopped == true)
     {
-        startRfDiscovery (true);
+        startRfDiscovery(true);
     }
 
     ALOGD ("%s: exit", fn);
@@ -551,7 +577,7 @@ bool PeerToPeer::createClient (tJNI_HANDLE jniHandle, UINT16 miu, UINT8 rw)
     }
     mMutex.unlock();
 
-    if (client == NULL)
+    if (client == NULL || i >=sMax)
     {
         ALOGE ("%s: fail", fn);
         return (false);
@@ -1185,7 +1211,6 @@ void PeerToPeer::enableP2pListening (bool isEnable)
     }
     ALOGD ("%s: exit; mIsP2pListening: %u", fn, mIsP2pListening);
 }
-
 
 /*******************************************************************************
 **

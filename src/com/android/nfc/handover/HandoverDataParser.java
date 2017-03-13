@@ -18,8 +18,6 @@ package com.android.nfc.handover;
 
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Random;
@@ -40,14 +38,14 @@ import android.util.Log;
  */
 public class HandoverDataParser {
     private static final String TAG = "NfcHandover";
-    private static final boolean DBG = false;
+    private static final boolean DBG = Log.isLoggable(HandoverDataParser.TAG, Log.VERBOSE); //false;
 
     private static final byte[] TYPE_BT_OOB = "application/vnd.bluetooth.ep.oob"
-            .getBytes(StandardCharsets.US_ASCII);
+            .getBytes(Charset.forName("US_ASCII"));
     private static final byte[] TYPE_BLE_OOB = "application/vnd.bluetooth.le.oob"
-            .getBytes(StandardCharsets.US_ASCII);
+            .getBytes(Charset.forName("US_ASCII"));
 
-    private static final byte[] TYPE_NOKIA = "nokia.com:bt".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] TYPE_NOKIA = "nokia.com:bt".getBytes(Charset.forName("US_ASCII"));
 
     private static final byte[] RTD_COLLISION_RESOLUTION = {0x63, 0x72}; // "cr";
 
@@ -116,7 +114,7 @@ public class HandoverDataParser {
 
     NdefRecord createBluetoothOobDataRecord() {
         byte[] payload = new byte[8];
-        // Note: this field should be little-endian per the BTSSP spec
+       // Note: this field should be little-endian per the BTSSP spec
         // The Android 4.1 implementation used big-endian order here.
         // No single Android implementation has ever interpreted this
         // length field when parsing this record though.
@@ -148,9 +146,9 @@ public class HandoverDataParser {
                 createBluetoothOobDataRecord()
         };
         return new NdefMessage(
-                createHandoverRequestRecord(),
+               createHandoverRequestRecord(),
                 dataRecords);
-    }
+   }
 
     NdefMessage createBluetoothHandoverSelectMessage(boolean activating) {
         return new NdefMessage(createHandoverSelectRecord(
@@ -306,9 +304,9 @@ public class HandoverDataParser {
 
             if (oob.getTnf() == NdefRecord.TNF_MIME_MEDIA &&
                     Arrays.equals(oob.getType(), TYPE_BLE_OOB)) {
-                return parseBleOob(ByteBuffer.wrap(oob.getPayload()));
+               return parseBleOob(ByteBuffer.wrap(oob.getPayload()));
             }
-        }
+       }
 
         return null;
     }
@@ -328,7 +326,7 @@ public class HandoverDataParser {
             return parseBleOob(ByteBuffer.wrap(r.getPayload()));
         }
 
-        // Check for Handover Select, followed by a BT OOB record
+       // Check for Handover Select, followed by a BT OOB record
         if (tnf == NdefRecord.TNF_WELL_KNOWN &&
                 Arrays.equals(type, NdefRecord.RTD_HANDOVER_SELECT)) {
             return parseBluetoothHandoverSelect(m);
@@ -356,14 +354,14 @@ public class HandoverDataParser {
             int nameLength = payload.get();
             byte[] nameBytes = new byte[nameLength];
             payload.get(nameBytes);
-            result.name = new String(nameBytes, StandardCharsets.UTF_8);
+            result.name = new String(nameBytes, Charset.forName("UTF-8"));
         } catch (IllegalArgumentException e) {
             Log.i(TAG, "nokia: invalid BT address");
         } catch (BufferUnderflowException e) {
             Log.i(TAG, "nokia: payload shorter than expected");
         }
         if (result.valid && result.name == null) result.name = "";
-        return result;
+       return result;
     }
 
     BluetoothHandoverData parseBtOob(ByteBuffer payload) {
@@ -374,7 +372,7 @@ public class HandoverDataParser {
             payload.position(2); // length
             byte[] address = parseMacFromBluetoothRecord(payload);
             result.device = mBluetoothAdapter.getRemoteDevice(address);
-            result.valid = true;
+           result.valid = true;
 
             while (payload.remaining() > 0) {
                 byte[] nameBytes;
@@ -384,13 +382,13 @@ public class HandoverDataParser {
                     case BT_HANDOVER_TYPE_SHORT_LOCAL_NAME:
                         nameBytes = new byte[len - 1];
                         payload.get(nameBytes);
-                        result.name = new String(nameBytes, StandardCharsets.UTF_8);
+                        result.name = new String(nameBytes, Charset.forName("UTF-8"));
                         break;
                     case BT_HANDOVER_TYPE_LONG_LOCAL_NAME:
                         if (result.name != null) break;  // prefer short name
                         nameBytes = new byte[len - 1];
                         payload.get(nameBytes);
-                        result.name = new String(nameBytes, StandardCharsets.UTF_8);
+                        result.name = new String(nameBytes, Charset.forName("UTF-8"));
                         break;
                     default:
                         payload.position(payload.position() + len - 1);
@@ -416,7 +414,7 @@ public class HandoverDataParser {
             while (payload.remaining() > 0) {
                 int len = payload.get();
                 int type = payload.get();
-                switch (type) {
+               switch (type) {
                     case BT_HANDOVER_TYPE_MAC: // mac address
                         byte[] address = parseMacFromBluetoothRecord(payload);
                         payload.position(payload.position() + 1); // advance over random byte
@@ -431,24 +429,28 @@ public class HandoverDataParser {
                             return result;
                         }
                         break;
-                    case BT_HANDOVER_TYPE_LONG_LOCAL_NAME:
+                   case BT_HANDOVER_TYPE_LONG_LOCAL_NAME:
                         byte[] nameBytes = new byte[len - 1];
                         payload.get(nameBytes);
-                        result.name = new String(nameBytes, StandardCharsets.UTF_8);
+                        result.name = new String(nameBytes, Charset.forName("UTF-8"));
                         break;
-                    case BT_HANDOVER_TYPE_SECURITY_MANAGER_TK:
+                   case BT_HANDOVER_TYPE_SECURITY_MANAGER_TK:
                         if (len-1 != SECURITY_MANAGER_TK_SIZE) {
-                            Log.i(TAG, "BT OOB: invalid size of SM TK, should be " +
+                           Log.i(TAG, "BT OOB: invalid size of SM TK, should be " +
                                   SECURITY_MANAGER_TK_SIZE + " bytes.");
                             break;
                         }
-
+                        byte[] reversedTK = new byte[len - 1];
+                        payload.get(reversedTK);
                         byte[] securityManagerTK = new byte[len - 1];
-                        payload.get(securityManagerTK);
-
+                        //TK in AD is in reverse order
+                        for (int i = 0; i < reversedTK.length; i++) {
+                            securityManagerTK[i] = reversedTK[securityManagerTK.length - 1 - i];
+                        }
                         result.oobData = new OobData();
                         result.oobData.setSecurityManagerTk(securityManagerTK);
                         break;
+
                     default:
                         payload.position(payload.position() + len - 1);
                         break;
@@ -461,7 +463,7 @@ public class HandoverDataParser {
         }
         if (result.valid && result.name == null) result.name = "";
         return result;
-    }
+   }
 
     private byte[] parseMacFromBluetoothRecord(ByteBuffer payload) {
         byte[] address = new byte[6];
@@ -469,23 +471,22 @@ public class HandoverDataParser {
         // ByteBuffer.order(LITTLE_ENDIAN) doesn't work for
         // ByteBuffer.get(byte[]), so manually swap order
         for (int i = 0; i < 3; i++) {
-            byte temp = address[i];
+           byte temp = address[i];
             address[i] = address[5 - i];
             address[5 - i] = temp;
         }
         return address;
     }
 
-    static byte[] addressToReverseBytes(String address) {
+   static byte[] addressToReverseBytes(String address) {
         String[] split = address.split(":");
         byte[] result = new byte[split.length];
 
         for (int i = 0; i < split.length; i++) {
-            // need to parse as int because parseByte() expects a signed byte
+           // need to parse as int because parseByte() expects a signed byte
             result[split.length - 1 - i] = (byte)Integer.parseInt(split[i], 16);
         }
 
         return result;
     }
 }
-

@@ -13,10 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#ifdef ESE_NFC_SYNCHRONIZATION
-#include <linux/ese-nfc-sync.h>
-#endif
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
@@ -32,16 +28,6 @@ extern phNci_mfc_auth_cmd_t  gAuthCmdBuf;
 static NFCSTATUS phNxpExtns_ProcessSysMessage (phLibNfc_Message_t *msg);
 static NFCSTATUS phNxpExtns_SendMsg (phLibNfc_Message_t *sysmsg);
 
-#ifdef ESE_NFC_SYNCHRONIZATION
-/* timing calculation structure*/
-typedef struct time_cal
-{
-    struct timeval tv1;
-    struct timeval tv2;
-} TimeCal;
-static int fd_ese_nfc_sync; /*file descriptor to hold sync driver handle*/
-#endif
-
 /*******************************************************************************
 **
 ** Function         EXTNS_Init
@@ -54,7 +40,7 @@ static int fd_ese_nfc_sync; /*file descriptor to hold sync driver handle*/
 **
 *******************************************************************************/
 NFCSTATUS EXTNS_Init (tNFA_DM_CBACK        *p_nfa_dm_cback,
-                     tNFA_CONN_CBACK      *p_nfa_conn_cback)
+                      tNFA_CONN_CBACK      *p_nfa_conn_cback)
 {
     NFCSTATUS status = NFCSTATUS_FAILED;
 
@@ -584,28 +570,28 @@ NFCSTATUS EXTNS_MfcRegisterNDefTypeHandler (tNFA_NDEF_CBACK *ndefHandlerCallback
 bool_t EXTNS_GetConnectFlag (void)
 {
     return (gphNxpExtns_Context.ExtnsConnect);
-}
 
+}
 void EXTNS_SetConnectFlag (bool_t flagval)
 {
     gphNxpExtns_Context.ExtnsConnect = flagval;
-}
 
-bool_t EXTNS_GetDeactivateFlag (void)
+}
+bool_t EXTNS_GetDeactivateFlag(void)
 {
-    return (gphNxpExtns_Context.ExtnsDeactivate);
-}
+   return (gphNxpExtns_Context.ExtnsDeactivate);
 
+}
 void EXTNS_SetDeactivateFlag (bool_t flagval)
 {
     gphNxpExtns_Context.ExtnsDeactivate = flagval;
-}
 
-bool_t EXTNS_GetCallBackFlag (void)
+}
+bool_t EXTNS_GetCallBackFlag(void)
 {
-    return (gphNxpExtns_Context.ExtnsCallBack);
-}
+   return (gphNxpExtns_Context.ExtnsCallBack);
 
+}
 void EXTNS_SetCallBackFlag (bool_t flagval)
 {
     gphNxpExtns_Context.ExtnsCallBack = flagval;
@@ -617,7 +603,7 @@ NFCSTATUS EXTNS_GetPresenceCheckStatus (void)
 
     clock_gettime (CLOCK_REALTIME, &ts);
     ts.tv_sec += 0;
-    ts.tv_nsec += 100*1000*1000; // 100 milisec
+    ts.tv_nsec += 100*1000*1000; // 100 milliseconds
     if (ts.tv_nsec >= 1000 * 1000 * 1000)
     {
         ts.tv_sec += 1;
@@ -692,4 +678,3 @@ NFCSTATUS EXTNS_CheckMfcResponse (uint8_t** sTransceiveData, uint32_t *sTranscei
 
     return status;
 }
-

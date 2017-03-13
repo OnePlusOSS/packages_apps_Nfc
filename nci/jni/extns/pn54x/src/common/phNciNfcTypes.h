@@ -149,7 +149,7 @@ typedef enum
     /* Other Sources */
     phNciNfc_eInvalid_DevType
 
-}phNciNfc_RFDevType_t;
+} phNciNfc_RFDevType_t;
 
 /*
  * RATS Response Params structure
@@ -219,7 +219,7 @@ typedef struct phNciNfc_RemoteDevInformation
     uint8_t   bTransBitRate;                        /* Transmit Bit Rate */
     uint8_t   bRecvBitRate;                         /* Receive Bit Rate */
     phNciNfc_RemoteDevInfo_t tRemoteDevInfo;        /* Structure object to #phNciNfc_RemoteDevInfo_t*/
-} phNciNfc_RemoteDevInformation_t, *pphNciNfc_RemoteDevInformation_t;/* Pointer to Remote Dev Info*/
+} phNciNfc_RemoteDevInformation_t,*pphNciNfc_RemoteDevInformation_t;/* Pointer to Remote Dev Info*/
 
 /*
  * Structure contains buffer where payload of the received data packet

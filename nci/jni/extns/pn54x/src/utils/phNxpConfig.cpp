@@ -1,18 +1,40 @@
-/*
- * Copyright (C) 2015 The Android Open Source Project
+/******************************************************************************
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ *  Copyright (C) 2011-2012 Broadcom Corporation
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at:
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ ******************************************************************************/
+
+/******************************************************************************
+ *
+ *  The original Work has been changed by NXP Semiconductors.
+ *
+ *  Copyright (C) 2015 The Android Open Source Project
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ ******************************************************************************/
 
 #include <phNxpConfig.h>
 #include <stdio.h>
@@ -31,12 +53,20 @@ const char alternative_config_path[] = "";
 
 #if 1
 const char transport_config_path[] = "/etc/";
+#if(NXP_EXTNS == TRUE)
+const char transit_config_path[] = "/data/nfc/";
+#endif
 #else
 const char transport_config_path[] = "res/";
 #endif
 
 #define config_name             "libnfc-nxp.conf"
+#if(NXP_EXTNS == TRUE)
+#define extra_config_base       "libnfc-"
+#else
 #define extra_config_base       "libnfc-nxp-"
+#endif
+
 #define extra_config_ext        ".conf"
 #define IsStringValue           0x80000000
 
@@ -66,12 +96,16 @@ public:
     static CNxpNfcConfig& GetInstance ();
     friend void readOptionalConfig (const char* optional);
     int checkTimestamp ();
+    int updateTimestamp ();
 
     bool    getValue (const char* name, char* pValue, size_t len) const;
     bool    getValue (const char* name, unsigned long& rValue) const;
     bool    getValue (const char* name, unsigned short & rValue) const;
     bool    getValue (const char* name, char* pValue, long len, long* readlen) const;
     const CNxpNfcParam* find (const char* p_name) const;
+#if(NXP_EXTNS == TRUE)
+    void    readNxpTransitConfig(const char* fileName) const;
+#endif
     void  clean ();
 private:
     CNxpNfcConfig ();
@@ -79,6 +113,11 @@ private:
     void    moveFromList ();
     void    moveToList ();
     void    add (const CNxpNfcParam* pParam);
+#if(NXP_EXTNS == TRUE)
+    void    dump();
+    bool    isAllowed(const char* name);
+    string  mCurrentFile;
+#endif
     list<const CNxpNfcParam*> m_list;
     bool    mValidFile;
     unsigned long m_timeStamp;
@@ -184,6 +223,9 @@ bool CNxpNfcConfig::readConfig (const char* name, bool bResetContent)
     int     base = 0;
     char    c;
     int     bflag = 0;
+#if(NXP_EXTNS == TRUE)
+    mCurrentFile = name;
+#endif
     state = BEGIN_LINE;
     /* open config file, read it into a buffer */
     if ((fd = fopen (name, "rb")) == NULL)
@@ -196,6 +238,8 @@ bool CNxpNfcConfig::readConfig (const char* name, bool bResetContent)
         }
         return false;
     }
+    ALOGD("%s Opened %s config %s\n", __func__, (bResetContent ? "base" : "optional"), name);
+
     stat (name, &buf);
     m_timeStamp = (unsigned long) buf.st_mtime;
 
@@ -208,8 +252,18 @@ bool CNxpNfcConfig::readConfig (const char* name, bool bResetContent)
             moveToList ();
     }
 
-    while (!feof (fd) && fread (&c, 1, 1, fd) == 1)
+    for (;;)
     {
+        if (feof(fd) || fread(&c, 1, 1, fd) != 1)
+        {
+            if (state == BEGIN_LINE)
+                break;
+
+            // got to the EOF but not in BEGIN_LINE state so the file
+            // probably does not end with a newline, so the parser has
+            // not processed current line, simulate a newline in the file
+            c = '\n';
+        }
         switch (state & 0xff)
         {
         case BEGIN_LINE:
@@ -267,8 +321,9 @@ bool CNxpNfcConfig::readConfig (const char* name, bool bResetContent)
                 Set (IsStringValue);
             }
             else
+            {
                 state = END_LINE;
-
+            }
             break;
         case BEGIN_HEX:
             if (c == 'x' || c == 'X')
@@ -446,6 +501,9 @@ CNxpNfcConfig& CNxpNfcConfig::GetInstance ()
         strPath.assign (transport_config_path);
         strPath += config_name;
         theInstance.readConfig (strPath.c_str (), true);
+#if(NXP_EXTNS == TRUE)
+        theInstance.readNxpTransitConfig("nxpTransit");
+#endif
     }
 
     return theInstance;
@@ -586,6 +644,27 @@ const CNxpNfcParam* CNxpNfcConfig::find (const char* p_name) const
     return NULL;
 }
 
+#if(NXP_EXTNS == TRUE)
+/*******************************************************************************
+**
+** Function:    CNxpNfcConfig::readNxpTransitConfig()
+**
+** Description: read Config settings from transit conf file
+**
+** Returns:     none
+**
+*******************************************************************************/
+void CNxpNfcConfig::readNxpTransitConfig(const char* fileName) const
+{
+    string strPath;
+    strPath.assign(transit_config_path);
+    strPath += extra_config_base;
+    strPath += fileName;
+    strPath += extra_config_ext;
+    CNxpNfcConfig::GetInstance().readConfig(strPath.c_str(), false);
+}
+#endif
+
 /*******************************************************************************
 **
 ** Function:    CNxpNfcConfig::clean()
@@ -622,17 +701,81 @@ void CNxpNfcConfig::add (const CNxpNfcParam* pParam)
         m_list.push_back (pParam);
         return;
     }
+#if(NXP_EXTNS == TRUE)
+    if((mCurrentFile.find("nxpTransit") != std::string::npos) && !isAllowed(pParam->c_str()))
+    {
+        ALOGD("%s Token restricted. Returning", __func__);
+        return;
+    }
+#endif
     for (list<const CNxpNfcParam*>::iterator it = m_list.begin (), itEnd = m_list.end (); it != itEnd; ++it)
     {
         if (**it < pParam->c_str ())
             continue;
 
+#if(NXP_EXTNS == TRUE)
+        if (**it == pParam->c_str())
+            m_list.insert(m_list.erase(it), pParam);
+        else
+            m_list.insert(it, pParam);
+#else
         m_list.insert (it, pParam);
+#endif
         return;
     }
     m_list.push_back (pParam);
 }
 
+#if(NXP_EXTNS == TRUE)
+/*******************************************************************************
+**
+** Function:    CNxpNfcConfig::dump()
+**
+** Description: prints all elements in the list
+**
+** Returns:     none
+**
+*******************************************************************************/
+void CNxpNfcConfig::dump()
+{
+    ALOGD("%s Enter", __func__);
+
+    for (list<const CNxpNfcParam*>::iterator it = m_list.begin(), itEnd = m_list.end(); it != itEnd; ++it)
+    {
+        if((*it)->str_len()>0)
+            ALOGD("%s %s \t= %s", __func__, (*it)->c_str(),(*it)->str_value());
+        else
+            ALOGD("%s %s \t= (0x%0lX)\n", __func__,(*it)->c_str(),(*it)->numValue());
+    }
+}
+
+/*******************************************************************************
+**
+** Function:    CNfcConfig::isAllowed()
+**
+** Description: checks if token update is allowed
+**
+** Returns:     true if allowed else false
+**
+*******************************************************************************/
+bool CNxpNfcConfig::isAllowed(const char* name)
+{
+    string token(name);
+    bool stat = false;
+    if((token.find("P2P_LISTEN_TECH_MASK") != std::string::npos)        ||
+            (token.find("HOST_LISTEN_TECH_MASK") != std::string::npos)  ||
+            (token.find("UICC_LISTEN_TECH_MASK") != std::string::npos)  ||
+            (token.find("POLLING_TECH_MASK") != std::string::npos)      ||
+            (token.find("NXP_RF_CONF_BLK") != std::string::npos)        ||
+            (token.find("NXP_CN_TRANSIT_BLK_NUM_CHECK_ENABLE") != std::string::npos) ||
+            (token.find("NXP_FWD_FUNCTIONALITY_ENABLE") != std::string::npos))
+
+    {
+        stat = true;
+    }
+    return stat;
+}
+#endif
 /*******************************************************************************
 **
 ** Function:    CNxpNfcConfig::moveFromList()
@@ -691,7 +834,7 @@ int CNxpNfcConfig::checkTimestamp ()
 
     if (stat(config_timestamp_path, &st) != 0)
     {
-        ALOGD ("%s file %s not exist, creat it.\n", __func__, config_timestamp_path);
+        ALOGD ("%s file %s not exist, create it.\n", __func__, config_timestamp_path);
         if ((fd = fopen (config_timestamp_path, "w+")) != NULL)
         {
             fwrite (&m_timeStamp, sizeof(unsigned long), 1, fd);
@@ -915,4 +1058,66 @@ extern "C" int isNxpConfigModified ()
 {
     CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance ();
     return rConfig.checkTimestamp ();
+}
+
+/*******************************************************************************
+**
+** Function:    updateNxpConfigTimestamp()
+**
+** Description: update if config file has modified
+**
+** Returns:     0 if not modified, 1 otherwise.
+**
+*******************************************************************************/
+extern "C" int updateNxpConfigTimestamp()
+{
+    CNxpNfcConfig& rConfig = CNxpNfcConfig::GetInstance();
+    return rConfig.updateTimestamp();
+}
+
+/*******************************************************************************
+**
+** Function:    CNxpNfcConfig::updateTimestamp()
+**
+** Description: update if config file has modified
+**
+** Returns:     0 if not modified, 1 otherwise.
+**
+*******************************************************************************/
+int CNxpNfcConfig::updateTimestamp()
+{
+    FILE*   fd;
+    struct stat st;
+    unsigned long value = 0;
+    int ret = 0;
+
+    if(stat(config_timestamp_path, &st) != 0)
+    {
+        ALOGD("%s file %s not exist, creat it.\n", __func__, config_timestamp_path);
+        if ((fd = fopen(config_timestamp_path, "w+")) != NULL)
+        {
+            fwrite(&m_timeStamp, sizeof(unsigned long), 1, fd);
+            fclose(fd);
+        }
+        return 1;
+    }
+    else
+    {
+        fd = fopen(config_timestamp_path, "r+");
+        if(fd == NULL)
+        {
+            ALOGE("%s Cannot open file %s\n", __func__, config_timestamp_path);
+            return 1;
+        }
+
+        fread(&value, sizeof(unsigned long), 1, fd);
+        ret = (value != m_timeStamp);
+        if(ret)
+        {
+            fseek(fd, 0, SEEK_SET);
+            fwrite(&m_timeStamp, sizeof(unsigned long), 1, fd);
+        }
+        fclose(fd);
+    }
+    return ret;
 }

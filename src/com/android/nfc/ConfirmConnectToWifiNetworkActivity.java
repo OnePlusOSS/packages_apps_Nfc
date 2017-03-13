@@ -69,7 +69,7 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
                 public void run() {
                     if (getAndClearEnableWifiInProgress()) {
                         showFailToast();
-                        ConfirmConnectToWifiNetworkActivity.this.finish();
+                        ConfirmConnectToWifiNetworkActivity.this.finishElegantly();
                     }
                 }
             }, ENABLE_WIFI_TIMEOUT_MILLIS);
@@ -94,11 +94,13 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
                         public void onSuccess() {
                             Toast.makeText(ConfirmConnectToWifiNetworkActivity.this,
                                     R.string.status_wifi_connected, Toast.LENGTH_SHORT).show();
+                            finishElegantly();
                         }
 
                         @Override
                         public void onFailure(int reason) {
                             showFailToast();
+                            finishElegantly();
                         }
                     });
         }
@@ -113,7 +115,7 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
     @Override
     public void onDismiss(DialogInterface dialog) {
         if (!mEnableWifiInProgress) {
-            finish();
+            finishElegantly();
         }
     }
 
@@ -151,5 +153,10 @@ public class ConfirmConnectToWifiNetworkActivity extends Activity
         }
 
         return enableWifiInProgress;
+    }
+
+    private void finishElegantly() {
+        finish();
+        overridePendingTransition(android.R.anim.fade_in,android.R.anim.fade_out);
     }
 }
