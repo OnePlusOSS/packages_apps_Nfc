@@ -1,6 +1,6 @@
 # Copyright (C), 2008-2012, OPPO Mobile Comm Corp., Ltd
 # VENDOR_EDIT
-# Ansroid.mk for the pn544 firmware compile.
+# Android.mk for the pn544 firmware compile.
 #
 # 15 Oct 2013, Yuyi <oppo@Independent Group>
 # Rewritten to use firmware of pn544.
