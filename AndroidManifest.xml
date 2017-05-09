@@ -61,6 +61,7 @@
                  android:label="@string/app_name"
                  android:theme="@android:style/Theme.Material.Light"
                  android:persistent="true"
+                 android:persistentWhenFeatureAvailable="android.hardware.nfc.any"
                  android:backupAgent="com.android.nfc.NfcBackupAgent"
                  android:killAfterRestore="false"
                  android:usesCleartextTraffic="false"
@@ -148,6 +149,12 @@
         <service android:name=".beam.BeamReceiveService"
             android:process=":beam"
         />
+
+        <receiver android:name=".NfcBootCompletedReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <service android:name=".handover.PeripheralHandoverService"
         />
