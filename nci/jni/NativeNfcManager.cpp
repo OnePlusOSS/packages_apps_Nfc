@@ -152,6 +152,7 @@ static uint16_t sCurrentConfigLen;
 static uint8_t sConfig[256];
 static int prevScreenState = NFA_SCREEN_STATE_OFF_LOCKED;
 static int NFA_SCREEN_POLLING_TAG_MASK = 0x10;
+static bool gIsDtaEnabled = false;
 /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////
 
@@ -980,6 +981,17 @@ static jboolean nfcManager_doInitialize (JNIEnv* e, jobject o)
                 /////////////////////////////////////////////////////////////////////////////////
                 // Add extra configuration here (work-arounds, etc.)
 
+                if (gIsDtaEnabled == true)
+                {
+                    uint8_t configData = 0;
+                    configData = 0x01;    /* Poll NFC-DEP : Highest Available Bit Rates */
+                    NFA_SetConfig(NFC_PMID_BITR_NFC_DEP, sizeof(uint8_t), &configData);
+                    configData = 0x0B;    /* Listen NFC-DEP : Waiting Time */
+                    NFA_SetConfig(NFC_PMID_WT, sizeof(uint8_t), &configData);
+                    configData = 0x0F;    /* Specific Parameters for NFC-DEP RF Interface */
+                    NFA_SetConfig(NFC_PMID_NFC_DEP_OP, sizeof(uint8_t), &configData);
+                }
+
                 struct nfc_jni_native_data *nat = getNative(e, o);
 
                 if ( nat )
@@ -1014,6 +1026,8 @@ static jboolean nfcManager_doInitialize (JNIEnv* e, jobject o)
                     }
                 }
 
+                prevScreenState = NFA_SCREEN_STATE_OFF_LOCKED;
+
                 // Do custom NFCA startup configuration.
                 doStartupConfig();
                 goto TheEnd;
@@ -1038,7 +1052,15 @@ TheEnd:
     return sIsNfaEnabled ? JNI_TRUE : JNI_FALSE;
 }
 
+static void nfcManager_doEnableDtaMode (JNIEnv*, jobject)
+{
+    gIsDtaEnabled = true;
+}
 
+static void nfcManager_doDisableDtaMode(JNIEnv*, jobject)
+{
+    gIsDtaEnabled = false;
+}
 /*******************************************************************************
 **
 ** Function:        nfcManager_enableDiscovery
@@ -1638,18 +1660,22 @@ static jint nfcManager_doGetTimeout(JNIEnv*, jobject, jint tech)
 **
 ** Function:        nfcManager_doDump
 **
-** Description:     Not used.
+** Description:     Get libnfc-nci dump
 **                  e: JVM environment.
-**                  o: Java object.
+**                  obj: Java object.
+**                  fdobj: File descriptor to be used
 **
-** Returns:         Text dump.
+** Returns:         Void
 **
 *******************************************************************************/
-static jstring nfcManager_doDump(JNIEnv* e, jobject)
+static void nfcManager_doDump(JNIEnv* e, jobject obj, jobject fdobj)
 {
-    char buffer[100];
-    snprintf(buffer, sizeof(buffer), "libnfc llc error_count=%u", /*libnfc_llc_error_count*/ 0);
-    return e->NewStringUTF(buffer);
+    int fd = jniGetFDFromFileDescriptor(e, fdobj);
+    if (fd < 0)
+        return;
+
+    NfcAdaptation& theInstance = NfcAdaptation::GetInstance();
+    theInstance.Dump(fd);
 }
 
 static jint nfcManager_doGetNciVersion(JNIEnv* , jobject)
@@ -1667,7 +1693,8 @@ static void nfcManager_doSetScreenState (JNIEnv* e, jobject o, jint screen_state
 
     if (sIsDisabling || !sIsNfaEnabled ||(NFC_GetNCIVersion() != NCI_VERSION_2_0))
         return;
-    if (prevScreenState == NFA_SCREEN_STATE_OFF_LOCKED || prevScreenState == NFA_SCREEN_STATE_OFF_UNLOCKED)
+    if (prevScreenState == NFA_SCREEN_STATE_OFF_LOCKED || prevScreenState == NFA_SCREEN_STATE_OFF_UNLOCKED ||
+            prevScreenState == NFA_SCREEN_STATE_ON_LOCKED)
     {
         SyncEventGuard guard (sNfaSetPowerSubState);
         status = NFA_SetPowerSubStateForScreenState(state);
@@ -1712,7 +1739,7 @@ static void nfcManager_doSetScreenState (JNIEnv* e, jobject o, jint screen_state
        return;
    }
 
-   if (prevScreenState == NFA_SCREEN_STATE_ON_LOCKED || prevScreenState == NFA_SCREEN_STATE_ON_UNLOCKED)
+   if (prevScreenState == NFA_SCREEN_STATE_ON_UNLOCKED)
    {
        SyncEventGuard guard (sNfaSetPowerSubState);
        status = NFA_SetPowerSubStateForScreenState(state);
@@ -1881,11 +1908,16 @@ static JNINativeMethod gMethods[] =
     {"doDisableScreenOffSuspend", "()V",
             (void *)nfcManager_doDisableScreenOffSuspend},
 
-    {"doDump", "()Ljava/lang/String;",
+    {"doDump", "(Ljava/io/FileDescriptor;)V",
             (void *)nfcManager_doDump},
 
     {"getNciVersion","()I",
              (void *)nfcManager_doGetNciVersion},
+    {"doEnableDtaMode", "()V",
+            (void*) nfcManager_doEnableDtaMode},
+    {"doDisableDtaMode", "()V",
+            (void*) nfcManager_doDisableDtaMode}
+
 };
 
 
