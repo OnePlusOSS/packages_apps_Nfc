@@ -16,16 +16,15 @@
 
 package com.android.nfc;
 
-import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.os.UserManager;
-
 import com.android.nfc.RegisteredComponentCache.ComponentInfo;
 import com.android.nfc.handover.HandoverDataParser;
 import com.android.nfc.handover.PeripheralHandoverService;
 
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.app.ActivityManagerNative;
 import android.app.IActivityManager;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
@@ -74,7 +73,6 @@ class NfcDispatcher {
     private final ContentResolver mContentResolver;
     private final HandoverDataParser mHandoverDataParser;
     private final String[] mProvisioningMimes;
-    private final String[] mLiveCaseMimes;
     private final ScreenStateHelper mScreenStateHelper;
     private final NfcUnlockManager mNfcUnlockManager;
     private final boolean mDeviceSupportsBluetooth;
@@ -89,7 +87,7 @@ class NfcDispatcher {
                   HandoverDataParser handoverDataParser,
                   boolean provisionOnly) {
         mContext = context;
-        mIActivityManager = ActivityManager.getService();
+        mIActivityManager = ActivityManagerNative.getDefault();
         mTechListFilters = new RegisteredComponentCache(mContext,
                 NfcAdapter.ACTION_TECH_DISCOVERED, NfcAdapter.ACTION_TECH_DISCOVERED);
         mContentResolver = context.getContentResolver();
@@ -112,16 +110,6 @@ class NfcDispatcher {
             }
         }
         mProvisioningMimes = provisionMimes;
-
-        String[] liveCaseMimes = null;
-        try {
-            // Get accepted mime-types
-            liveCaseMimes = context.getResources().
-                    getStringArray(R.array.live_case_mime_types);
-        } catch (NotFoundException e) {
-           liveCaseMimes = null;
-        }
-        mLiveCaseMimes = liveCaseMimes;
     }
 
     public synchronized void setForegroundDispatch(PendingIntent intent,
@@ -241,8 +229,6 @@ class NfcDispatcher {
         IntentFilter[] overrideFilters;
         String[][] overrideTechLists;
         String[] provisioningMimes;
-        String[] liveCaseMimes;
-        NdefMessage message = null;
         boolean provisioningOnly;
 
         synchronized (this) {
@@ -251,34 +237,22 @@ class NfcDispatcher {
             overrideTechLists = mOverrideTechLists;
             provisioningOnly = mProvisioningOnly;
             provisioningMimes = mProvisioningMimes;
-            liveCaseMimes = mLiveCaseMimes;
         }
 
         boolean screenUnlocked = false;
-        boolean liveCaseDetected = false;
-        Ndef ndef = Ndef.get(tag);
         if (!provisioningOnly &&
                 mScreenStateHelper.checkScreenState() == ScreenStateHelper.SCREEN_STATE_ON_LOCKED) {
             screenUnlocked = handleNfcUnlock(tag);
-
-            if (ndef != null) {
-                message = ndef.getCachedNdefMessage();
-                if (message != null) {
-                    String ndefMimeType = message.getRecords()[0].toMimeType();
-                    if (liveCaseMimes != null &&
-                            Arrays.asList(liveCaseMimes).contains(ndefMimeType)) {
-                        liveCaseDetected = true;
-                    }
-                }
-            }
-
-            if (!screenUnlocked && !liveCaseDetected)
+            if (!screenUnlocked) {
                 return DISPATCH_FAIL;
+            }
         }
 
+        NdefMessage message = null;
+        Ndef ndef = Ndef.get(tag);
         if (ndef != null) {
             message = ndef.getCachedNdefMessage();
-        } else {
+        }else {
             NfcBarcode nfcBarcode = NfcBarcode.get(tag);
             if (nfcBarcode != null && nfcBarcode.getType() == NfcBarcode.TYPE_KOVIO) {
                 message = decodeNfcBarcodeUri(nfcBarcode);
@@ -391,7 +365,7 @@ class NfcDispatcher {
         // All tags of NfcBarcode technology and Kovio type have lengths of a multiple of 16 bytes
         if (tagId.length >= 4
                 && (tagId[1] == URI_PREFIX_HTTP_WWW || tagId[1] == URI_PREFIX_HTTPS_WWW
-                    || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
+                || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
             // Look for optional URI terminator (0xfe), used to indicate the end of a URI prior to
             // the end of the full NfcBarcode payload. No terminator means that the URI occupies the
             // entire length of the payload field. Exclude checking the CRC in the final two bytes
@@ -627,17 +601,10 @@ class NfcDispatcher {
         if (handover.oobData != null) {
             intent.putExtra(PeripheralHandoverService.EXTRA_PERIPHERAL_OOB_DATA, handover.oobData);
         }
-        if (handover.uuids != null) {
-            intent.putExtra(PeripheralHandoverService.EXTRA_PERIPHERAL_UUIDS, handover.uuids);
-        }
-        if (handover.btClass != null) {
-            intent.putExtra(PeripheralHandoverService.EXTRA_PERIPHERAL_CLASS, handover.btClass);
-        }
         mContext.startServiceAsUser(intent, UserHandle.CURRENT);
 
         return true;
     }
-
 
     /**
      * Tells the ActivityManager to resume allowing app switches.

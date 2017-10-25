@@ -154,7 +154,9 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
                 mTransferManager.start();
             }
         } else if (state == BluetoothAdapter.STATE_OFF) {
-            mBluetoothEnabledByNfc = false;
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            //mBluetoothEnabledByNfc = false;
+            Log.e(TAG, "BeamSendService BluetoothAdapter.STATE_OFF ");
         }
     }
 
@@ -177,10 +179,14 @@ public class BeamSendService extends Service implements BeamTransferManager.Call
             if (DBG) Log.d(TAG, "Transfer failed, final state: " +
                     Integer.toString(transfer.mState));
         }
-
+        Log.e(TAG, "onTransferComplete mBluetoothEnabledByNfc= " +mBluetoothEnabledByNfc);
         if (mBluetoothEnabledByNfc) {
             mBluetoothEnabledByNfc = false;
-            mBluetoothAdapter.disable();
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            if(mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothAdapter.disable();
+            }
         }
 
         invokeCompleteCallback(success);

@@ -27,6 +27,8 @@ import android.bluetooth.BluetoothDevice;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
+import android.content.pm.PackageManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Environment;
@@ -35,6 +37,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.SystemClock;
 import android.os.UserHandle;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import java.io.File;
@@ -43,9 +46,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
-
-import android.support.v4.content.FileProvider;
 
 /**
  * A BeamTransferManager object represents a set of files
@@ -341,7 +343,7 @@ public class BeamTransferManager implements Handler.Callback,
             notBuilder.setContentTitle(mContext.getString(R.string.beam_complete));
 
             if (mIncoming) {
-                notBuilder.setContentText(mContext.getString(R.string.beam_tap_to_view));
+                notBuilder.setContentText(mContext.getString(R.string.beam_touch_to_view));
                 Intent viewIntent = buildViewIntent();
                 PendingIntent contentIntent = PendingIntent.getActivity(
                         mContext, mTransferId, viewIntent, 0, null);
@@ -482,13 +484,21 @@ public class BeamTransferManager implements Handler.Callback,
         Intent viewIntent = new Intent(Intent.ACTION_VIEW);
 
         String filePath = mPaths.get(0);
+
         Uri mediaUri = mMediaUris.get(filePath);
         Uri uri =  mediaUri != null ? mediaUri :
-            FileProvider.getUriForFile(mContext, "com.google.android.nfc.fileprovider",
-                    new File(filePath));
+            FileProvider.getUriForFile(mContext, "com.android.nfc.fileprovider", new File(filePath));
+
+
+        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         viewIntent.setDataAndTypeAndNormalize(uri, mMimeTypes.get(filePath));
-        viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK |
-                Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+
+        List<ResolveInfo> resInfoList = mContext.getPackageManager().queryIntentActivities(viewIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo resolveInfo : resInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            mContext.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
         return viewIntent;
     }
 

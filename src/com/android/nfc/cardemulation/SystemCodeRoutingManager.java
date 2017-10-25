@@ -104,7 +104,7 @@ public class SystemCodeRoutingManager {
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
-        pw.println("HCE-F routing table:");
+        pw.println("Routing table:");
         synchronized (mLock) {
             for (T3tIdentifier t3tIdentifier : mConfiguredT3tIdentifiers) {
                 pw.println("    " + t3tIdentifier.systemCode +

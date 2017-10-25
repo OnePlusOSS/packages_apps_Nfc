@@ -13,6 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/******************************************************************************
+ *
+ *  The original Work has been changed by NXP Semiconductors.
+ *
+ *  Copyright (C) 2015 NXP Semiconductors
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ ******************************************************************************/
 
 package com.android.nfc;
 
@@ -24,6 +43,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -59,6 +79,13 @@ public class NfceeAccessControl {
      */
     final HashMap<Integer, Boolean> mUidCache;  // contents guarded by this
 
+    /**
+     * Map of UID to valid packages name,used as a cache.
+     * Sometime there is a signature with tag package and need to distinguish those package
+     * even if they has the some UID(certificate)
+     */
+    final HashMap<Integer, HashSet<String> > mPackageCache;
+
     final Context mContext;
     final boolean mDebugPrintSignature;
 
@@ -66,6 +93,7 @@ public class NfceeAccessControl {
         mContext = context;
         mNfceeAccess = new HashMap<Signature, String[]>();
         mUidCache = new HashMap<Integer, Boolean>();
+        mPackageCache = new HashMap<Integer,HashSet<String> >();
         mDebugPrintSignature = parseNfceeAccess();
     }
 
@@ -77,8 +105,14 @@ public class NfceeAccessControl {
     public boolean check(int uid, String pkg) {
         synchronized (this) {
             Boolean cached = mUidCache.get(uid);
+            HashSet packageCached = mPackageCache.get(uid);
+
             if (cached != null) {
-                return cached;
+                if (packageCached == null || packageCached.contains(pkg)) {
+                    return cached;
+                } else {
+                    return false;
+                }
             }
 
             boolean access = false;
@@ -89,7 +123,7 @@ public class NfceeAccessControl {
             for (String uidPkg : pkgs) {
                 if (uidPkg.equals(pkg)) {
                     // Ensure the package has access permissions
-                    if (checkPackageNfceeAccess(pkg)) {
+                    if (checkPackageNfceeAccess(uid, pkg)) {
                         access = true;
                     }
                     break;
@@ -109,11 +143,17 @@ public class NfceeAccessControl {
     public boolean check(ApplicationInfo info) {
         synchronized (this) {
             Boolean access = mUidCache.get(info.uid);
+            HashSet packageCached = mPackageCache.get(info.uid);
             if (access == null) {
-                access = checkPackageNfceeAccess(info.packageName);
+                access = checkPackageNfceeAccess(info.uid, info.packageName);
                 mUidCache.put(info.uid, access);
             }
-            return access;
+
+            if (packageCached == null || packageCached.contains(info.packageName)) {
+                return access;
+            } else {
+                return false;
+            }
         }
     }
 
@@ -127,7 +167,7 @@ public class NfceeAccessControl {
      * Check with package manager if the pkg may use NFCEE.
      * Does not use cache.
      */
-    boolean checkPackageNfceeAccess(String pkg) {
+    boolean checkPackageNfceeAccess(int uid,String pkg) {
         PackageManager pm = mContext.getPackageManager();
         try {
             PackageInfo info = pm.getPackageInfo(pkg, PackageManager.GET_SIGNATURES);
@@ -143,14 +183,24 @@ public class NfceeAccessControl {
                 if (packages == null) {
                     continue;
                 }
+
+                HashSet<String> uidPkgs = mPackageCache.get(uid);
                 if (packages.length == 0) {
                     // wildcard access
                     if (DBG) Log.d(TAG, "Granted NFCEE access to " + pkg + " (wildcard)");
+                    // mPackageCache.put(uid,null);
                     return true;
                 }
+
                 for (String p : packages) {
                     if (pkg.equals(p)) {
                         // explicit package access
+                        if (uidPkgs == null) {
+                            uidPkgs = new HashSet<String> ();
+                        }
+
+                        uidPkgs.add(pkg);
+                        mPackageCache.put(uid,uidPkgs);
                         if (DBG) Log.d(TAG, "Granted access to " + pkg + " (explicit)");
                         return true;
                     }

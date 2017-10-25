@@ -18,7 +18,6 @@ package com.android.nfc.handover;
 
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.OobData;
 import android.content.BroadcastReceiver;
@@ -33,8 +32,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
 import android.os.Messenger;
-import android.os.Parcelable;
-import android.os.ParcelUuid;
 import android.os.RemoteException;
 import android.util.Log;
 
@@ -51,8 +48,6 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
     public static final String EXTRA_PERIPHERAL_NAME = "headsetname";
     public static final String EXTRA_PERIPHERAL_TRANSPORT = "transporttype";
     public static final String EXTRA_PERIPHERAL_OOB_DATA = "oobdata";
-    public static final String EXTRA_PERIPHERAL_UUIDS = "uuids";
-    public static final String EXTRA_PERIPHERAL_CLASS = "class";
 
     // Amount of time to pause polling when connecting to peripherals
     private static final int PAUSE_POLLING_TIMEOUT_MS = 35000;
@@ -93,7 +88,7 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
                 handleBluetoothStateChanged(intent);
             }
         }
-    };
+   };
 
     public PeripheralHandoverService() {
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -106,7 +101,6 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-
         synchronized (sLock) {
             if (mStartId != 0) {
                 mStartId = startId;
@@ -165,19 +159,9 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
         String name = msgData.getString(EXTRA_PERIPHERAL_NAME);
         int transport = msgData.getInt(EXTRA_PERIPHERAL_TRANSPORT);
         OobData oobData = msgData.getParcelable(EXTRA_PERIPHERAL_OOB_DATA);
-        Parcelable[] parcelables = msgData.getParcelableArray(EXTRA_PERIPHERAL_UUIDS);
-        BluetoothClass btClass = msgData.getParcelable(EXTRA_PERIPHERAL_CLASS);
-
-        ParcelUuid[] uuids = null;
-        if (parcelables != null) {
-            uuids = new ParcelUuid[parcelables.length];
-            for (int i = 0; i < parcelables.length; i++) {
-                uuids[i] = (ParcelUuid)parcelables[i];
-            }
-        }
 
         mBluetoothPeripheralHandover = new BluetoothPeripheralHandover(
-                this, device, name, transport, oobData, uuids, btClass, this);
+                this, device, name, transport, oobData, this);
 
         if (transport == BluetoothDevice.TRANSPORT_LE) {
             mHandler.sendMessageDelayed(
@@ -212,7 +196,9 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
                 }
             }
         } else if (state == BluetoothAdapter.STATE_OFF) {
-            mBluetoothEnabledByNfc = false;
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            //mBluetoothEnabledByNfc = false;
+            Log.e(TAG, "PeripheralHandoverService BluetoothAdapter.STATE_OFF ");
             mBluetoothHeadsetConnected = false;
         }
     }
@@ -258,13 +244,18 @@ public class PeripheralHandoverService extends Service implements BluetoothPerip
     void disableBluetoothIfNeeded() {
         if (!mBluetoothEnabledByNfc) return;
 
+        Log.e(TAG, "disableBluetoothIfNeeded mBluetoothEnabledByNfc= " +mBluetoothEnabledByNfc);
         if (!mBluetoothHeadsetConnected) {
-            mBluetoothAdapter.disable();
+            /*finx RAIN-11381 android beam tansmit unfinish*/
+            if(mBluetoothAdapter.isEnabled())
+            {
+                mBluetoothAdapter.disable();
+            }
             mBluetoothEnabledByNfc = false;
         }
     }
 
-    @Override
+   @Override
     public IBinder onBind(Intent intent) {
         return null;
     }

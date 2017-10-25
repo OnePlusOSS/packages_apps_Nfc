@@ -73,7 +73,6 @@ public class RegisteredNfcFServicesCache {
     final Callback mCallback;
     final AtomicFile mDynamicSystemCodeNfcid2File;
     boolean mActivated = false;
-    boolean mUserSwitched = false;
 
     public interface Callback {
         void onNfcFServicesUpdated(int userId, final List<NfcFServiceInfo> services);
@@ -302,10 +301,7 @@ public class RegisteredNfcFServicesCache {
                 }
                 matched = false;
             }
-            if (mUserSwitched) {
-                Log.d(TAG, "User switched, rebuild internal cache");
-                mUserSwitched = false;
-            } else if (toBeAdded.size() == 0 && toBeRemoved.size() == 0) {
+            if (toBeAdded.size() == 0 && toBeRemoved.size() == 0) {
                 Log.d(TAG, "Service unchanged, not updating");
                 return;
             }
@@ -697,12 +693,6 @@ public class RegisteredNfcFServicesCache {
         }
     }
 
-    public void onUserSwitched() {
-        synchronized (mLock) {
-            mUserSwitched = true;
-        }
-    }
-
     private String generateRandomNfcid2() {
         long min = 0L;
         long max = 0xFFFFFFFFFFFFL;
@@ -715,7 +705,7 @@ public class RegisteredNfcFServicesCache {
     }
 
     public void dump(FileDescriptor fd, PrintWriter pw, String[] args) {
-        pw.println("Registered HCE-F services for current user: ");
+        pw.println("Registered HCE services for current user: ");
         synchronized (mLock) {
             UserServices userServices = findOrCreateUserLocked(ActivityManager.getCurrentUser());
             for (NfcFServiceInfo service : userServices.services.values()) {

@@ -102,23 +102,22 @@ public final class NfcWifiProtectedSetup {
                 ByteBuffer payload = ByteBuffer.wrap(record.getPayload());
                 while (payload.hasRemaining()) {
                     short fieldId = payload.getShort();
-                    int fieldSize = payload.getShort() & 0xFFFF;
+                    short fieldSize = payload.getShort();
                     if (fieldId == CREDENTIAL_FIELD_ID) {
                         return parseCredential(payload, fieldSize);
                     }
-                    payload.position(payload.position() + fieldSize);
                 }
             }
         }
         return null;
     }
 
-    private static WifiConfiguration parseCredential(ByteBuffer payload, int size) {
+    private static WifiConfiguration parseCredential(ByteBuffer payload, short size) {
         int startPosition = payload.position();
         WifiConfiguration result = new WifiConfiguration();
         while (payload.position() < startPosition + size) {
             short fieldId = payload.getShort();
-            int fieldSize = payload.getShort() & 0xFFFF;
+            short fieldSize = payload.getShort();
 
             // sanity check
             if (payload.position() + fieldSize > startPosition + size) {
