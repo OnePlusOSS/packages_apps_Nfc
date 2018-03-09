@@ -16,25 +16,20 @@
 
 package com.android.nfc;
 
-import android.Manifest;
-import android.app.ActivityManager;
 import android.bluetooth.BluetoothAdapter;
 import android.os.UserManager;
-
 import com.android.nfc.RegisteredComponentCache.ComponentInfo;
 import com.android.nfc.handover.HandoverDataParser;
 import com.android.nfc.handover.PeripheralHandoverService;
 
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.AlertDialog;
 import android.app.IActivityManager;
 import android.app.PendingIntent;
 import android.app.PendingIntent.CanceledException;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
@@ -51,10 +46,6 @@ import android.nfc.tech.NfcBarcode;
 import android.os.RemoteException;
 import android.os.UserHandle;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.WindowManager;
-import android.widget.TextView;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -63,7 +54,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Dispatch of NFC events to start activities
@@ -206,14 +196,6 @@ class NfcDispatcher {
             return intent;
         }
 
-        public boolean isWebIntent() {
-            return ndefUri != null && ndefUri.normalizeScheme().getScheme().startsWith("http");
-        }
-
-        public String getUri() {
-            return ndefUri.toString();
-        }
-
         /**
          * Launch the activity via a (single) NFC root task, so that it
          * creates a new task stack instead of interfering with any existing
@@ -297,7 +279,7 @@ class NfcDispatcher {
 
         if (ndef != null) {
             message = ndef.getCachedNdefMessage();
-        } else {
+        }else {
             NfcBarcode nfcBarcode = NfcBarcode.get(tag);
             if (nfcBarcode != null && nfcBarcode.getType() == NfcBarcode.TYPE_KOVIO) {
                 message = decodeNfcBarcodeUri(nfcBarcode);
@@ -410,7 +392,7 @@ class NfcDispatcher {
         // All tags of NfcBarcode technology and Kovio type have lengths of a multiple of 16 bytes
         if (tagId.length >= 4
                 && (tagId[1] == URI_PREFIX_HTTP_WWW || tagId[1] == URI_PREFIX_HTTPS_WWW
-                    || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
+                || tagId[1] == URI_PREFIX_HTTP || tagId[1] == URI_PREFIX_HTTPS)) {
             // Look for optional URI terminator (0xfe), used to indicate the end of a URI prior to
             // the end of the full NfcBarcode payload. No terminator means that the URI occupies the
             // entire length of the payload field. Exclude checking the CRC in the final two bytes
@@ -552,13 +534,6 @@ class NfcDispatcher {
 
         // regular launch
         dispatch.intent.setPackage(null);
-
-        if (dispatch.isWebIntent()) {
-            if (DBG) Log.i(TAG, "matched Web link - prompting user");
-            showWebLinkConfirmation(dispatch);
-            return true;
-        }
-
         if (dispatch.tryStartActivity()) {
             if (DBG) Log.i(TAG, "matched NDEF");
             return true;
@@ -664,7 +639,6 @@ class NfcDispatcher {
         return true;
     }
 
-
     /**
      * Tells the ActivityManager to resume allowing app switches.
      *
@@ -727,33 +701,6 @@ class NfcDispatcher {
             Log.d(TAG, "Component not enabled: " + compname);
         }
         return enabled;
-    }
-
-    void showWebLinkConfirmation(DispatchInfo dispatch) {
-        if (!mContext.getResources().getBoolean(R.bool.enable_nfc_url_open_dialog)) {
-            dispatch.tryStartActivity();
-            return;
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(
-                mContext.getApplicationContext(),
-                android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
-        builder.setTitle(R.string.title_confirm_url_open);
-        LayoutInflater inflater = LayoutInflater.from(mContext);
-        View view = inflater.inflate(R.layout.url_open_confirmation, null);
-        if (view != null) {
-            TextView url = view.findViewById(R.id.url_open_confirmation_link);
-            if (url != null) {
-                url.setText(dispatch.getUri());
-            }
-            builder.setView(view);
-        }
-        builder.setNegativeButton(R.string.cancel, (dialog, which) -> {});
-        builder.setPositiveButton(R.string.action_confirm_url_open, (dialog, which) -> {
-            dispatch.tryStartActivity();
-        });
-        AlertDialog dialog = builder.create();
-        dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-        dialog.show();
     }
 
     void dump(FileDescriptor fd, PrintWriter pw, String[] args) {

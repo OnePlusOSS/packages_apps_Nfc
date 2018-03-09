@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 NXP Semiconductors
+ * Copyright (C) 2015 NXP Semiconductors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,8 @@ import com.android.nfc.snep.SnepException;
 import com.android.nfc.snep.SnepMessage;
 import com.android.nfc.snep.SnepMessenger;
 
-public final class DtaSnepClient {
+public final class DtaSnepClient
+{
     private static final String TAG = "DtaSnepClient";
     private static final boolean DBG = true;
     private static final int DEFAULT_ACCEPTABLE_LENGTH = 1024;
@@ -61,7 +62,8 @@ public final class DtaSnepClient {
 
     SnepMessenger mMessenger = null;
 
-    public DtaSnepClient() {
+    public DtaSnepClient()
+    {
         mServiceName = DEFAULT_SERVICE_NAME;
         mPort = DEFAULT_PORT;
         mAcceptableLength = DEFAULT_ACCEPTABLE_LENGTH;
@@ -80,146 +82,157 @@ public final class DtaSnepClient {
         mTestCaseId = testCaseId;
     }
 
-    public void DtaClientOperations(Context mContext) {
+    public void DtaClientOperations(Context mContext)
+    {
         DtaServiceConnector dtaServiceConnector=new DtaServiceConnector(mContext);
         dtaServiceConnector.bindService();
         if (DBG) Log.d(TAG, "Connecting remote server");
-        try {
+        try{
             connect();
-        } catch(IOException e) {
+        }catch(IOException e){
             Log.e(TAG, "Error connecting remote server");
         }
-        switch(mTestCaseId) {
-           //TC_C_BIT_BV_01
-           case 1:
+        switch(mTestCaseId)
+        {
+           case 1: //TC_C_BIT_BV_01
            {
                try {
                    if (DBG) Log.d(TAG, "PUT Small Ndef Data");
                    put(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                     // TODO Auto-generated catch block
                      e.printStackTrace();
                } catch (IOException e) {
+                     // TODO Auto-generated catch block
                      e.printStackTrace();
                }
                close();
            }
            break;
-           //TC_C_BIT_BI_01_0
-           case 2:
+           case 2: //TC_C_BIT_BI_01_0
+           {
+               try {
+                       if (DBG) Log.d(TAG, "PUT Small Ndef Data");
+                       put(SnepMessage.getSmallNdef());
+                       dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
+               } catch (UnsupportedEncodingException e) {
+                     // TODO Auto-generated catch block
+                     e.printStackTrace();
+               } catch (IOException e) {
+                   // TODO Auto-generated catch block
+                   e.printStackTrace();
+               }
+               close();
+           }
+           break;
+           case 3: //TC_C_BIT_BI_01_1
            {
                try {
                    if (DBG) Log.d(TAG, "PUT Small Ndef Data");
                    put(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                } catch (IOException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                }
                close();
            }
            break;
-           //TC_C_BIT_BI_01_1
-           case 3:
+           case 4: //TC_C_PUT_BV_01
            {
                try {
                    if (DBG) Log.d(TAG, "PUT Small Ndef Data");
                    put(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                } catch (IOException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                }
                close();
            }
            break;
-           //TC_C_PUT_BV_01
-           case 4:
+           case 5: //TC_C_PUT_BV_02
            {
                try {
-                   if (DBG) Log.d(TAG, "PUT Small Ndef Data");
-                   put(SnepMessage.getSmallNdef());
-                   dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
-               } catch (UnsupportedEncodingException e) {
-                   e.printStackTrace();
-               } catch (IOException e) {
-                   e.printStackTrace();
-               }
+                if (DBG) Log.d(TAG, "PUT Large Ndef Data");
+                put(SnepMessage.getLargeNdef());
+                dtaServiceConnector.sendMessage(SnepMessage.getLargeNdef().toString());
+            } catch (UnsupportedEncodingException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
                close();
            }
            break;
-           //TC_C_PUT_BV_02
-           case 5:
+           case 6: //TC_C_PUT_BI_01
            {
                try {
-                   if (DBG) Log.d(TAG, "PUT Large Ndef Data");
-                   put(SnepMessage.getLargeNdef());
-                   dtaServiceConnector.sendMessage(SnepMessage.getLargeNdef().toString());
-               } catch (UnsupportedEncodingException e) {
-                   e.printStackTrace();
-               } catch (IOException e) {
-                   e.printStackTrace();
-               }
+                if (DBG) Log.d(TAG, "PUT Large Ndef Data");
+                put(SnepMessage.getLargeNdef());
+                dtaServiceConnector.sendMessage(SnepMessage.getLargeNdef().toString());
+            } catch (UnsupportedEncodingException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
                close();
            }
            break;
-           //TC_C_PUT_BI_01
-           case 6:
-           {
-               try {
-                   if (DBG) Log.d(TAG, "PUT Large Ndef Data");
-                   put(SnepMessage.getLargeNdef());
-                   dtaServiceConnector.sendMessage(SnepMessage.getLargeNdef().toString());
-               } catch (UnsupportedEncodingException e) {
-                   e.printStackTrace();
-               } catch (IOException e) {
-                   e.printStackTrace();
-               }
-               close();
-           }
-           break;
-           //TC_C_GET_BV_01
-           case 7:
+           case 7: //TC_C_GET_BV_01
            {
                try {
                    if (DBG) Log.d(TAG, "GET Ndef Message");
                    get(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                } catch (IOException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                }
                close();
            }
            break;
-           //TC_C_GET_BV_02
-           case 8:
+           case 8: //TC_C_GET_BV_02
            {
                try {
                    if (DBG) Log.d(TAG, "GET Ndef Message");
                    get(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                } catch (IOException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                }
                close();
            }
            break;
-           //TC_C_GET_BV_03
-           case 9:
+           case 9: //TC_C_GET_BV_03
            {
                try {
                    if (DBG) Log.d(TAG, "GET Ndef Message");
                    get(SnepMessage.getSmallNdef());
                    dtaServiceConnector.sendMessage(SnepMessage.getSmallNdef().toString());
                } catch (UnsupportedEncodingException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                } catch (IOException e) {
+                   // TODO Auto-generated catch block
                    e.printStackTrace();
                }
                close();
@@ -304,7 +317,8 @@ public final class DtaSnepClient {
             if (socket != null) {
                 try {
                     socket.close();
-                } catch (IOException e2) {}
+                } catch (IOException e2) {
+                }
             }
             synchronized (this) {
                 mState = DISCONNECTED;

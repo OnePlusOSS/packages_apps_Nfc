@@ -22,7 +22,7 @@
 
     <!-- The accepted mime-types when NFC is enabled in setup wizard.
          Mime-types must be lower case, wildcards are *not* accepted. -->
-    <string-array name="provisioning_mime_types" translatable="false">
+    <string-array name="provisioning_mime_types">
         <item>application/com.android.managedprovisioning</item>
     </string-array>
 </resources>

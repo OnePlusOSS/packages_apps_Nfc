@@ -41,8 +41,8 @@ public class ConfirmConnectActivity extends Activity {
         mDevice = launchIntent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
         if (mDevice == null) finish();
         Resources res = getResources();
-        String confirmString = String.format(res.getString(R.string.confirm_pairing),
-                launchIntent.getStringExtra(BluetoothDevice.EXTRA_NAME));
+        String deviceName = mDevice.getName() != null ? mDevice.getName() : "";
+        String confirmString = String.format(res.getString(R.string.confirm_pairing), deviceName);
         builder.setMessage(confirmString)
                .setCancelable(false)
                .setPositiveButton(res.getString(R.string.pair_yes),

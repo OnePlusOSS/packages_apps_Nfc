@@ -16,8 +16,6 @@
 
 package com.android.nfc.beam;
 
-import com.android.nfc.R;
-
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.Intent;
@@ -97,7 +95,7 @@ public class BluetoothOppHandover implements Handler.Callback {
 
     void sendIntent() {
         Intent intent = new Intent();
-        intent.setPackage(mContext.getString(R.string.bluetooth_package));
+        intent.setPackage("com.android.bluetooth");
         String mimeType = MimeTypeUtil.getMimeTypeForUri(mContext, mUris.get(0));
         intent.setType(mimeType);
         intent.putExtra(BluetoothDevice.EXTRA_DEVICE, mDevice);
@@ -106,7 +104,7 @@ public class BluetoothOppHandover implements Handler.Callback {
             // to the Bluetooth process. This works, but we don't have
             // a good framework API for revoking permission yet.
             try {
-                mContext.grantUriPermission(mContext.getString(R.string.bluetooth_package), uri,
+                mContext.grantUriPermission("com.android.bluetooth", uri,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION);
             } catch (SecurityException e) {
                 Log.e(TAG, "Failed to transfer permission to Bluetooth process.");
